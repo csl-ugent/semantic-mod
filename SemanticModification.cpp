@@ -9,10 +9,13 @@
 #include <fstream>
 #include <iostream>
 #include <set>
+#include <algorithm>
+#include <cstdlib>
+#include <sstream>
 
 #include "SemanticAnalyser.h"
 #include "SemanticData.h"
-#include "util.h"
+#include "SemanticUtil.h"
 
 // Declares clang::SyntaxOnlyAction.
 #include "clang/Frontend/FrontendActions.h"
@@ -53,8 +56,8 @@ using namespace clang;
 using namespace clang::ast_matchers;
 
 // Declaration of used methods.
-void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool Tool);
-void writeChangesToOutput();
+void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Tool);
+void writeChangesToOutput(Rewriter* rewriter, std::string subfolderPrefix, int version);
 
 // CommonOptionsParser declares HelpMessage with a description of the common
 // command-line options related to the compilation database and input files.
@@ -75,7 +78,7 @@ typedef struct structOrdering_ {
 } StructOrdering;
 
 
-void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool Tool) {
+void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Tool) {
 
     // Debug information.
     llvm::outs() << "Struct reordering analysis...\n";
@@ -102,12 +105,32 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool 
         }
         std::random_shuffle(ordering.begin(), ordering.end());
 
-        // We check if the struc/reordering already exists.
+        // We check if the struct/reordering already exists.
         StructOrdering orderingStruct = StructOrdering({chosenStruct->getName(), ordering});
-        if (chosen->find(orderingStruct) == chosen->end()) {
 
-            // Retry...
+        std::vector<StructOrdering>::iterator it;
+        int found = 0;
+        for (it = chosen.begin(); it != chosen.end(); ++it) {
+            if (it->name == orderingStruct.name && it->chosen == orderingStruct.chosen) {
+                found = 1;
+                break;
+            }
+        }
+
+        // Retry...
+        if (found == 1) {
             continue;
+        }
+
+        // Debug information.
+        llvm::outs() << "Chosen struct: " << orderingStruct.name << "\n";
+        llvm::outs() << "Chosen ordering: " << "\n";
+        {
+            std::vector<int>::iterator it;
+            for (it = orderingStruct.chosen.begin(); it != orderingStruct.chosen.end(); ++it) {
+                llvm::outs() << *it << " ";
+            }
+            llvm::outs() << "\n";
         }
 
         // We create new structData information.
@@ -117,11 +140,12 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool 
         std::vector<FieldData> fieldData = chosenStruct->getFieldData();
 
         // We select the fields according to the given ordering.
-        std::vector<int>::iterator it;
-        for (it = ordering.begin(); it != ordering.end(); ++it) {
+        std::vector<int>::iterator itTwo;
+        for (itTwo = ordering.begin(); itTwo != ordering.end(); ++itTwo) {
 
             // The chosen field.
-            FieldData chosenField = fieldData[*it];
+            int position = *itTwo;
+            FieldData chosenField = fieldData[position];
             structData->addFieldData(chosenField.position,
                                     chosenField.fieldName,
                                     chosenField.fieldType,
@@ -132,20 +156,45 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool 
         semanticData->getStructReordering()->addStructReorderingData(chosenStruct->getName(), structData);
 
         // We run the rewriter tool.
-        int result = Tool.run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter));
+        if (amountChosen != 2) {
+            int result = Tool->run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, false));
+        }
 
-        // We increase the amount of configurations we have chosen.
+        // We write the changes to the output.
+        writeChangesToOutput(rewriter, "structreordering_", amountChosen+1);
+
+        // We need to clear the set of structures that have been rewritten already.
+        semanticData->getStructReordering()->clearRewritten();
+
+        // We clear the structure reodering map.
         // And add the ordering structure to the chosen vector.
+        // We increase the amount of configurations we have chosen.
+        semanticData->getStructReordering()->clearStructReorderings();
         chosen.push_back(orderingStruct);
         amountChosen++;
     }
 }
 
 // Method which is used to write the changes
-void writeChangesToOutput(Rewriter* rewriter, std::string subfolderPreix) {
+void writeChangesToOutput(Rewriter* rewriter, std::string subfolderPrefix, int version) {
 
-    // Keep track of the subfolder.
-    static int subfolder = 1;
+    // We construct the full output directory.
+    std::stringstream s;
+    s << subfolderPrefix << "v" << version;
+
+    std::string outputDirectory = s.str();
+    std::string fullPath = OutputDirectory + "/" + outputDirectory;
+
+    // Debug
+    llvm::outs() << "Full path: " << fullPath << "\n";
+
+    // We check if this directory exists, if it doesn't we will create it.
+    const int dir_err = system(("mkdir -p " + fullPath).c_str());
+    if (-1 == dir_err)
+    {
+        llvm::outs() << "Error creating directory!\n";
+        return;
+    }
 
     // Output stream.
     std::ofstream outputFile;
@@ -153,18 +202,23 @@ void writeChangesToOutput(Rewriter* rewriter, std::string subfolderPreix) {
     // We write the results to a new location.
     for (Rewriter::buffer_iterator I = rewriter->buffer_begin(), E = rewriter->buffer_end(); I != E; ++I) {
 
+        std::string output = std::string(I->second.begin(), I->second.end());
+        llvm::outs() << "Output: " << output << "\n";
+
         // Get the file name.
         StringRef fileNameRef = rewriter->getSourceMgr().getFileEntryForID(I->first)->getName();
         std::string fileName = std::string(fileNameRef.data());
+        llvm::outs() << "Obtained filename: " << fileName << "\n";
+
         fileName = fileName.substr(fileName.find_last_of("/\\") + 1); /* until the end automatically... */
 
         llvm::outs() << "Filename: " << fileName << "\n";
 
         // Write changes to the file.
-        outputFile.open((OutputDirectory + "/" + fileName).c_str());
-        std::string output = std::string(I->second.begin(), I->second.end());
-        outputFile.write(output.c_str(), output.length());
-        outputFile.close();
+        //outputFile.open((fullPath + "/" + fileName).c_str());
+
+        //outputFile.write(output.c_str(), output.length());
+        //outputFile.close();
     }
 }
 
@@ -188,10 +242,13 @@ int main(int argc, const char **argv) {
 
     // PHASE ONE: analysis of the source code (semantic analyser).
     llvm::outs() << "Phase one: analysis phase...\n";
-    int result = Tool.run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter));
+    int result = Tool.run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, true));
 
     // PHASE TWO: applying the semantic modifications.
     llvm::outs() << "Phase two: applying semantic modifications... \n";
+
+    // We apply the struct reordering.
+    structReordering(semanticData, rewriter, &Tool);
 
     // Free used memory.
     delete semanticData;

@@ -2,6 +2,7 @@
 #define _SEMANTICDATA
 
 #include <map>
+#include <set>
 #include <string>
 #include "clang/Basic/SourceManager.h"
 
@@ -58,6 +59,9 @@ private:
     // Map containing all information regarding reorderings.
     std::map<std::string, StructData*> structReorderings;
 
+    // Set containing all structs that have been rewritten already.
+    std::set<std::string> rewritten;
+
 public:
 
     explicit StructReordering() {}
@@ -72,6 +76,12 @@ public:
     // Check if a struct is already defined as a key in the struct map.
     bool isInStructMap(std::string name);
 
+    // Check if a struct is already defined as a key in the struct reordering map.
+    bool isInStructReorderingMap(std::string name);
+
+    // Check if a struct has been rewritten already.
+    bool hasBeenRewritten(std::string name);
+
     // Method used to add structure data to the struct data map.
     // This object will take ownership of the allocated memory and release
     // it when necessary.
@@ -80,6 +90,15 @@ public:
     // Method used to add structure reordering data to the structure reordering
     // information map.
     void addStructReorderingData(std::string name, StructData* data);
+
+    // Method used to add a structure to the set of rewritten structs.
+    void structRewritten(std::string name);
+
+    // Method used to clear the structure reordering information map.
+    void clearStructReorderings();
+
+    // Clear the set of structures that have been rewritten already.
+    void clearRewritten();
 };
 
 

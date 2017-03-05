@@ -21,9 +21,26 @@ class SemanticAnalyser : public clang::RecursiveASTVisitor<SemanticAnalyser> {
 private:
     clang::ASTContext *astContext; // Used for getting additional AST info.
     SemanticData* semanticData;
-    clang::Rewriter* rewriter;
 public:
     explicit SemanticAnalyser(clang::CompilerInstance *CI,
+                              SemanticData* semanticData)
+      : astContext(&(CI->getASTContext())),
+        semanticData(semanticData) // Initialize private members.
+    { }
+
+    // Detection of record declarations (can be structs, unions or classes).
+    virtual bool VisitRecordDecl(clang::RecordDecl *D);
+};
+
+
+// Semantic Rewriter, will rewrite source code based on the AST.
+class SemanticRewriter : public clang::RecursiveASTVisitor<SemanticRewriter> {
+private:
+    clang::ASTContext *astContext; // Used for getting additional AST info.
+    SemanticData* semanticData;
+    clang::Rewriter* rewriter;
+public:
+    explicit SemanticRewriter(clang::CompilerInstance *CI,
                               SemanticData* semanticData,
                               clang::Rewriter* rewriter)
       : astContext(&(CI->getASTContext())),
@@ -41,18 +58,30 @@ public:
 // to the different translation units.
 class SemanticAnalyserASTConsumer : public clang::ASTConsumer {
 private:
-    SemanticAnalyser *visitor;
+    SemanticRewriter *visitorRewriter;
+    SemanticAnalyser *visitorAnalysis;
     SemanticData* semanticData;
     clang::Rewriter* rewriter;
+    bool analysis;
+    clang::CompilerInstance *CI;
 public:
     // Override the constructor in order to pass CI.
     explicit SemanticAnalyserASTConsumer(clang::CompilerInstance *CI,
                                          SemanticData* semanticData,
-                                         clang::Rewriter* rewriter)
-        : visitor(new SemanticAnalyser(CI, semanticData, rewriter)),
-          semanticData(semanticData),
-          rewriter(rewriter) // Initialize the visitor
-    {}
+                                         clang::Rewriter* rewriter,
+                                         bool analysis)
+        : semanticData(semanticData),
+          rewriter(rewriter), // Initialize the visitor
+          analysis(analysis),
+          CI(CI)
+    {
+        // Visitor depends on the fact we are analysing or not.
+        if (this->analysis) {
+            visitorAnalysis = new SemanticAnalyser(this->CI, semanticData);
+        } else {
+            visitorRewriter = new SemanticRewriter(this->CI, semanticData, rewriter);
+        }
+    }
 
     // Override this to call our SemanticAnalyser on the entire source file.
     virtual void HandleTranslationUnit(clang::ASTContext &Context);
@@ -63,10 +92,12 @@ class SemanticAnalyserFrontendAction : public clang::ASTFrontendAction {
 private:
     SemanticData* semanticData;
     clang::Rewriter* rewriter;
+    bool analysis;
 public:
-    explicit SemanticAnalyserFrontendAction(SemanticData* semanticData, clang::Rewriter* rewriter)
+    explicit SemanticAnalyserFrontendAction(SemanticData* semanticData, clang::Rewriter* rewriter, bool analysis)
     : semanticData(semanticData),
-      rewriter(rewriter)
+      rewriter(rewriter),
+      analysis(analysis)
     {}
 
     virtual clang::ASTConsumer *CreateASTConsumer(clang::CompilerInstance &CI, llvm::StringRef file);
@@ -78,10 +109,12 @@ class SemanticAnalyserFrontendActionFactory : public clang::tooling::FrontendAct
 private:
     SemanticData* semanticData;
     clang::Rewriter* rewriter;
+    bool analysis;
 public:
-    SemanticAnalyserFrontendActionFactory(SemanticData* semanticData, clang::Rewriter* rewriter)
+    SemanticAnalyserFrontendActionFactory(SemanticData* semanticData, clang::Rewriter* rewriter, bool analysis)
         : semanticData(semanticData),
-          rewriter(rewriter)
+          rewriter(rewriter),
+          analysis(analysis)
     {}
     clang::FrontendAction* create() override;
 };

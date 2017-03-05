@@ -6,8 +6,8 @@ add_clang_executable(semantic-mod
   SemanticAnalyser.cpp
   SemanticData.h
   SemanticData.cpp
-  Util.h
-  Util.c
+  SemanticUtil.h
+  SemanticUtil.cpp
   )
 
 target_link_libraries(semantic-mod
