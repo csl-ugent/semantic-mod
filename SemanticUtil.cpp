@@ -10,3 +10,8 @@ int random_0_to_n(int n) {
     // return a number between 0 and n-1.
     return rand() % n;
 }
+
+int factorial(int n)
+{
+  return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
+}

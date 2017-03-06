@@ -69,7 +69,7 @@ static cl::extrahelp MoreHelp("\nMore help text...\n");
 
 // Extra output option.
 static cl::opt<std::string> OutputDirectory("od");
-static cl::opt<int> AmountOfReorderings("struct_reorder_am");
+static cl::opt<int> AmountOfReorderings("sr_am");
 
 // Method which applies the structure reordering.
 typedef struct structOrdering_ {
@@ -84,11 +84,37 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
     llvm::outs() << "Struct reordering analysis...\n";
 
     // We determine the structs that will be reordered.
-    int amount = 3;
+    int amount = AmountOfReorderings;
     int amountChosen = 0;
     std::vector<StructOrdering> chosen;
     std::map<std::string, StructData*>::iterator it;
     std::map<std::string, StructData*> structMap = semanticData->getStructReordering()->getStructMap();
+
+    // We need to determine the maximum amount of reorderings that is actually
+    // possible with the given input source files (based on the analysis phase).
+    {
+        StructData* current;
+        int totalReorderings = 0;
+        for (it = structMap.begin(); it != structMap.end(); ++it) {
+            // We set the current StructData we are iterating over.
+            current = it->second;
+
+            // We increase the total possible reorderings, based on
+            // the factorial of the number of fields.
+            totalReorderings += factorial(current->getFieldDataSize());
+        }
+
+        // Debug.
+        llvm::outs() << "Total reorderings possible with " << structMap.size() << " structs is: " << totalReorderings << "\n";
+
+        // We might need to cap the total possible reorderings.
+        if (amount > totalReorderings) {
+            amount = totalReorderings;
+        }
+    }
+
+    // Debug.
+    llvm::outs() << "Amount of reorderings is set to: " << amount << "\n";
 
     // We choose the amount of configurations of this struct that is required.
     while (amountChosen < amount)
@@ -156,15 +182,16 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
         semanticData->getStructReordering()->addStructReorderingData(chosenStruct->getName(), structData);
 
         // We run the rewriter tool.
-        if (amountChosen != 2) {
-            int result = Tool->run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, false));
-        }
+        int result = Tool->run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, false));
 
         // We write the changes to the output.
         writeChangesToOutput(rewriter, "structreordering_", amountChosen+1);
 
         // We need to clear the set of structures that have been rewritten already.
         semanticData->getStructReordering()->clearRewritten();
+
+        // We need to clear the rewriter's modifications.
+        rewriter->undoChanges();
 
         // We clear the structure reodering map.
         // And add the ordering structure to the chosen vector.
@@ -196,14 +223,14 @@ void writeChangesToOutput(Rewriter* rewriter, std::string subfolderPrefix, int v
         return;
     }
 
+    // We delete all the files in the given directory.
+    system(("exec rm -r " + fullPath + "/*").c_str());
+
     // Output stream.
     std::ofstream outputFile;
 
     // We write the results to a new location.
     for (Rewriter::buffer_iterator I = rewriter->buffer_begin(), E = rewriter->buffer_end(); I != E; ++I) {
-
-        std::string output = std::string(I->second.begin(), I->second.end());
-        llvm::outs() << "Output: " << output << "\n";
 
         // Get the file name.
         StringRef fileNameRef = rewriter->getSourceMgr().getFileEntryForID(I->first)->getName();
@@ -215,10 +242,10 @@ void writeChangesToOutput(Rewriter* rewriter, std::string subfolderPrefix, int v
         llvm::outs() << "Filename: " << fileName << "\n";
 
         // Write changes to the file.
-        //outputFile.open((fullPath + "/" + fileName).c_str());
-
-        //outputFile.write(output.c_str(), output.length());
-        //outputFile.close();
+        std::string output = std::string(I->second.begin(), I->second.end());
+        outputFile.open((fullPath + "/" + fileName).c_str());
+        outputFile.write(output.c_str(), output.length());
+        outputFile.close();
     }
 }
 
