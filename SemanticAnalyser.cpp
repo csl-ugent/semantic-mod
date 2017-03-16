@@ -139,7 +139,67 @@ ASTConsumer* SemanticAnalyserFrontendAction::CreateASTConsumer(CompilerInstance 
     return new SemanticAnalyserASTConsumer(&CI, this->semanticData, this->rewriter, this->analysis);
 }
 
+// Semantic analyser frontend action: action that will start the consumer.
+void SemanticAnalyserFrontendAction::EndSourceFileAction () {
+
+    // Whenever we are NOT doing analysis we should write out the changes.
+    if (!this->analysis && rewriter->buffer_begin() != rewriter->buffer_end()) {
+        writeChangesToOutput(this->rewriter, this->outputPrefix, this->version);
+
+        // We need to clear the rewriter's modifications.
+        rewriter->undoChanges();
+    }
+}
+
+// Method which is used to write the changes
+void SemanticAnalyserFrontendAction::writeChangesToOutput(Rewriter* rewriter, std::string subfolderPrefix, int version) {
+
+    // We construct the full output directory.
+    std::stringstream s;
+    s << subfolderPrefix << "v" << version;
+
+    std::string fullPath = s.str();
+
+    // Debug
+    llvm::outs() << "Full path: " << fullPath << "\n";
+
+    // We check if this directory exists, if it doesn't we will create it.
+    const int dir_err = system(("mkdir -p " + fullPath).c_str());
+    if (-1 == dir_err)
+    {
+        llvm::outs() << "Error creating directory!\n";
+        return;
+    }
+    // Output stream.
+    std::ofstream outputFile;
+
+    // We write the results to a new location.
+    for (Rewriter::buffer_iterator I = rewriter->buffer_begin(), E = rewriter->buffer_end(); I != E; ++I) {
+
+        // Get the file name.
+        llvm::outs() << "Writing FILEID: " << I->first.getHashValue() << "\n";
+
+        StringRef fileNameRef = rewriter->getSourceMgr().getFileEntryForID(I->first)->getName();
+        std::string fileName = std::string(fileNameRef.data());
+        llvm::outs() << "Obtained filename: " << fileName << "\n";
+
+        fileName = fileName.substr(fileName.find_last_of("/\\") + 1); /* until the end automatically... */
+
+        // Write changes to the file.
+        // Write changes to the file.
+        std::string output = std::string(I->second.begin(), I->second.end());
+        outputFile.open((fullPath + "/" + fileName).c_str());
+
+        StringRef MB = rewriter->getSourceMgr().getBufferData(I->first);
+        std::string content = std::string(MB.data());
+        llvm::outs() << "Changes: " << output.c_str() << "\n";
+
+        outputFile.write(output.c_str(), output.length());
+        outputFile.close();
+    }
+}
+
 // Function used to create the semantic analyser frontend action.
 FrontendAction* SemanticAnalyserFrontendActionFactory::create() {
-    return new SemanticAnalyserFrontendAction(this->semanticData, this->rewriter, this->analysis);
+    return new SemanticAnalyserFrontendAction(this->semanticData, this->rewriter, this->analysis, this->version, this->outputPrefix);
 }

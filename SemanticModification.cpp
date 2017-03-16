@@ -182,13 +182,7 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
         semanticData->getStructReordering()->addStructReorderingData(chosenStruct->getName(), structData);
 
         // We run the rewriter tool.
-        int result = Tool->run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, false));
-
-        // We write the changes to the output.
-        writeChangesToOutput(rewriter, "structreordering_", amountChosen+1);
-
-        // We need to clear the set of structures that have been rewritten already.
-        semanticData->getStructReordering()->clearRewritten();
+        int result = Tool->run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, false, amountChosen+1, OutputDirectory + "/struct_r_"));
 
         // We need to clear the rewriter's modifications.
         rewriter->undoChanges();
@@ -196,56 +190,11 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
         // We clear the structure reodering map.
         // And add the ordering structure to the chosen vector.
         // We increase the amount of configurations we have chosen.
+        // We need to clear the set of structures that have been rewritten already.
+        semanticData->getStructReordering()->clearRewritten();
         semanticData->getStructReordering()->clearStructReorderings();
         chosen.push_back(orderingStruct);
         amountChosen++;
-    }
-}
-
-// Method which is used to write the changes
-void writeChangesToOutput(Rewriter* rewriter, std::string subfolderPrefix, int version) {
-
-    // We construct the full output directory.
-    std::stringstream s;
-    s << subfolderPrefix << "v" << version;
-
-    std::string outputDirectory = s.str();
-    std::string fullPath = OutputDirectory + "/" + outputDirectory;
-
-    // Debug
-    llvm::outs() << "Full path: " << fullPath << "\n";
-
-    // We check if this directory exists, if it doesn't we will create it.
-    const int dir_err = system(("mkdir -p " + fullPath).c_str());
-    if (-1 == dir_err)
-    {
-        llvm::outs() << "Error creating directory!\n";
-        return;
-    }
-
-    // We delete all the files in the given directory.
-    system(("exec rm -r " + fullPath + "/*").c_str());
-
-    // Output stream.
-    std::ofstream outputFile;
-
-    // We write the results to a new location.
-    for (Rewriter::buffer_iterator I = rewriter->buffer_begin(), E = rewriter->buffer_end(); I != E; ++I) {
-
-        // Get the file name.
-        StringRef fileNameRef = rewriter->getSourceMgr().getFileEntryForID(I->first)->getName();
-        std::string fileName = std::string(fileNameRef.data());
-        llvm::outs() << "Obtained filename: " << fileName << "\n";
-
-        fileName = fileName.substr(fileName.find_last_of("/\\") + 1); /* until the end automatically... */
-
-        llvm::outs() << "Filename: " << fileName << "\n";
-
-        // Write changes to the file.
-        std::string output = std::string(I->second.begin(), I->second.end());
-        outputFile.open((fullPath + "/" + fileName).c_str());
-        outputFile.write(output.c_str(), output.length());
-        outputFile.close();
     }
 }
 

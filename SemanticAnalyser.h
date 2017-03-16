@@ -1,6 +1,12 @@
 #ifndef _SEMANTICANALYSER
 #define _SEMANTICANALYSER
 
+#include <string>
+#include <sstream>
+#include <cstdlib>
+#include <sstream>
+#include <fstream>
+
 #include "SemanticData.h"
 
 #include "clang/AST/AST.h"
@@ -93,14 +99,20 @@ private:
     SemanticData* semanticData;
     clang::Rewriter* rewriter;
     bool analysis;
+    int version;
+    std::string outputPrefix;
 public:
-    explicit SemanticAnalyserFrontendAction(SemanticData* semanticData, clang::Rewriter* rewriter, bool analysis)
+    explicit SemanticAnalyserFrontendAction(SemanticData* semanticData, clang::Rewriter* rewriter, bool analysis, int version, std::string outputPrefix)
     : semanticData(semanticData),
       rewriter(rewriter),
-      analysis(analysis)
+      analysis(analysis),
+      version(version),
+      outputPrefix(outputPrefix)
     {}
 
     virtual clang::ASTConsumer *CreateASTConsumer(clang::CompilerInstance &CI, llvm::StringRef file);
+    virtual void EndSourceFileAction();
+    virtual void writeChangesToOutput(clang::Rewriter* rewriter, std::string subfolderPrefix, int version);
 };
 
 // Frontend action factory.
@@ -110,11 +122,15 @@ private:
     SemanticData* semanticData;
     clang::Rewriter* rewriter;
     bool analysis;
+    int version;
+    std::string outputPrefix;
 public:
-    SemanticAnalyserFrontendActionFactory(SemanticData* semanticData, clang::Rewriter* rewriter, bool analysis)
+    SemanticAnalyserFrontendActionFactory(SemanticData* semanticData, clang::Rewriter* rewriter, bool analysis, int version = 0, std::string outputPrefix = "")
         : semanticData(semanticData),
           rewriter(rewriter),
-          analysis(analysis)
+          analysis(analysis),
+          version(version),
+          outputPrefix(outputPrefix)
     {}
     clang::FrontendAction* create() override;
 };
