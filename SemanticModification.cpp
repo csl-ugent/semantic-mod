@@ -69,6 +69,7 @@ static cl::extrahelp MoreHelp("\nMore help text...\n");
 
 // Extra output option.
 static cl::opt<std::string> OutputDirectory("od");
+static cl::opt<std::string> BaseDirectory("bd");
 static cl::opt<int> AmountOfReorderings("sr_am");
 
 // Method which applies the structure reordering.
@@ -182,10 +183,7 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
         semanticData->getStructReordering()->addStructReorderingData(chosenStruct->getName(), structData);
 
         // We run the rewriter tool.
-        int result = Tool->run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, false, amountChosen+1, OutputDirectory + "/struct_r_"));
-
-        // We need to clear the rewriter's modifications.
-        rewriter->undoChanges();
+        int result = Tool->run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, false, amountChosen+1, OutputDirectory + "/struct_r_", BaseDirectory));
 
         // We clear the structure reodering map.
         // And add the ordering structure to the chosen vector.

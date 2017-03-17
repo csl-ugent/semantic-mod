@@ -20,8 +20,8 @@ bool SemanticAnalyser::VisitRecordDecl(RecordDecl *D) {
             return true; // Structure already analysed...
         } else {
             // Some debug information.
-            D->dump();
-            llvm::outs() << "\n";
+            //D->dump();
+            //llvm::outs() << "\n";
         }
 
         // We create new structData information.
@@ -144,7 +144,7 @@ void SemanticAnalyserFrontendAction::EndSourceFileAction () {
 
     // Whenever we are NOT doing analysis we should write out the changes.
     if (!this->analysis && rewriter->buffer_begin() != rewriter->buffer_end()) {
-        writeChangesToOutput(this->rewriter, this->outputPrefix, this->version);
+        writeChangesToOutput();
 
         // We need to clear the rewriter's modifications.
         rewriter->undoChanges();
@@ -152,12 +152,11 @@ void SemanticAnalyserFrontendAction::EndSourceFileAction () {
 }
 
 // Method which is used to write the changes
-void SemanticAnalyserFrontendAction::writeChangesToOutput(Rewriter* rewriter, std::string subfolderPrefix, int version) {
+void SemanticAnalyserFrontendAction::writeChangesToOutput() {
 
     // We construct the full output directory.
     std::stringstream s;
-    s << subfolderPrefix << "v" << version;
-
+    s << this->outputPrefix << "v" << this->version;
     std::string fullPath = s.str();
 
     // Debug
@@ -176,20 +175,27 @@ void SemanticAnalyserFrontendAction::writeChangesToOutput(Rewriter* rewriter, st
     // We write the results to a new location.
     for (Rewriter::buffer_iterator I = rewriter->buffer_begin(), E = rewriter->buffer_end(); I != E; ++I) {
 
-        // Get the file name.
-        llvm::outs() << "Writing FILEID: " << I->first.getHashValue() << "\n";
-
         StringRef fileNameRef = rewriter->getSourceMgr().getFileEntryForID(I->first)->getName();
-        std::string fileName = std::string(fileNameRef.data());
-        llvm::outs() << "Obtained filename: " << fileName << "\n";
+        std::string fileNameStr = std::string(fileNameRef.data());
+        llvm::outs() << "Obtained filename: " << fileNameStr << "\n";
+        std::string fileName = fileNameStr.substr(fileNameStr.find(baseDirectory) + baseDirectory.length() + 1); /* until the end automatically... */
 
-        fileName = fileName.substr(fileName.find_last_of("/\\") + 1); /* until the end automatically... */
+        // Optionally create required subdirectories.
+        {
+            int subDirectoryPos = fileName.find_last_of("/\\");
+            if (subDirectoryPos != std::string::npos) {
+                llvm::outs() << "Creating subdirectories..." << "\n";
+                std::string subdirectories = fileName.substr(0, fileName.find_last_of("/\\"));
+                llvm::outs() <<  "Extracted subdirectory path: " << subdirectories << "\n";
+                system(("mkdir -p " + fullPath + "/" + subdirectories).c_str());
+            }
+        }
 
         // Write changes to the file.
-        // Write changes to the file.
+        std::string outputPath = fullPath + "/" + fileName;
+
         std::string output = std::string(I->second.begin(), I->second.end());
-        outputFile.open((fullPath + "/" + fileName).c_str());
-
+        outputFile.open(outputPath.c_str());
         StringRef MB = rewriter->getSourceMgr().getBufferData(I->first);
         std::string content = std::string(MB.data());
         llvm::outs() << "Changes: " << output.c_str() << "\n";
@@ -201,5 +207,5 @@ void SemanticAnalyserFrontendAction::writeChangesToOutput(Rewriter* rewriter, st
 
 // Function used to create the semantic analyser frontend action.
 FrontendAction* SemanticAnalyserFrontendActionFactory::create() {
-    return new SemanticAnalyserFrontendAction(this->semanticData, this->rewriter, this->analysis, this->version, this->outputPrefix);
+    return new SemanticAnalyserFrontendAction(this->semanticData, this->rewriter, this->analysis, this->version, this->outputPrefix, this->baseDirectory);
 }

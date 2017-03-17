@@ -101,18 +101,20 @@ private:
     bool analysis;
     int version;
     std::string outputPrefix;
+    std::string baseDirectory;
 public:
-    explicit SemanticAnalyserFrontendAction(SemanticData* semanticData, clang::Rewriter* rewriter, bool analysis, int version, std::string outputPrefix)
+    explicit SemanticAnalyserFrontendAction(SemanticData* semanticData, clang::Rewriter* rewriter, bool analysis, int version, std::string outputPrefix, std::string baseDirectory)
     : semanticData(semanticData),
       rewriter(rewriter),
       analysis(analysis),
       version(version),
-      outputPrefix(outputPrefix)
+      outputPrefix(outputPrefix),
+      baseDirectory(baseDirectory)
     {}
 
     virtual clang::ASTConsumer *CreateASTConsumer(clang::CompilerInstance &CI, llvm::StringRef file);
     virtual void EndSourceFileAction();
-    virtual void writeChangesToOutput(clang::Rewriter* rewriter, std::string subfolderPrefix, int version);
+    virtual void writeChangesToOutput();
 };
 
 // Frontend action factory.
@@ -124,13 +126,15 @@ private:
     bool analysis;
     int version;
     std::string outputPrefix;
+    std::string baseDirectory;
 public:
-    SemanticAnalyserFrontendActionFactory(SemanticData* semanticData, clang::Rewriter* rewriter, bool analysis, int version = 0, std::string outputPrefix = "")
+    SemanticAnalyserFrontendActionFactory(SemanticData* semanticData, clang::Rewriter* rewriter, bool analysis, int version = 0, std::string outputPrefix = "", std::string baseDirectory = "")
         : semanticData(semanticData),
           rewriter(rewriter),
           analysis(analysis),
           version(version),
-          outputPrefix(outputPrefix)
+          outputPrefix(outputPrefix),
+          baseDirectory(baseDirectory)
     {}
     clang::FrontendAction* create() override;
 };
