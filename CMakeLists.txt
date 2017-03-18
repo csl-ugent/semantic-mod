@@ -8,6 +8,9 @@ add_clang_executable(semantic-mod
   SemanticData.cpp
   SemanticUtil.h
   SemanticUtil.cpp
+  jsoncpp.cpp
+  json.h
+  json-forwards.h
   )
 
 target_link_libraries(semantic-mod

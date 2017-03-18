@@ -30,14 +30,20 @@ private:
     // The name of this structure.
     std::string name;
 
+    // The fileName in which this struct appears.
+    std::string fileName;
+
     // Information regarding the fields within the structure.
     std::vector<FieldData> fieldData;
 public:
 
-    explicit StructData(std::string name): name(name) {};
+    explicit StructData(std::string name, std::string fileName): name(name), fileName(fileName) {};
 
     // Obtain the name of this structure.
     std::string getName() { return this->name; }
+
+    // Obtain the fileName in which this structure is defined.
+    std::string getFileName() {return this->fileName; }
 
     // Obtain the field data.
     std::vector<FieldData> getFieldData() { return this->fieldData; }

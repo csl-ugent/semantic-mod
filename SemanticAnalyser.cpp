@@ -25,7 +25,11 @@ bool SemanticAnalyser::VisitRecordDecl(RecordDecl *D) {
         }
 
         // We create new structData information.
-        StructData* structData = new StructData(structName);
+        StringRef fileNameRef = astContext->getSourceManager().getFilename(
+            D->getLocation());
+
+        std::string fileNameStr = std::string(fileNameRef.data());
+        StructData* structData = new StructData(structName, fileNameStr);
 
         // Analysing the members of the structure.
         std::string fieldName;

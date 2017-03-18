@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <sstream>
 
+#include "json.h"
 #include "SemanticAnalyser.h"
 #include "SemanticData.h"
 #include "SemanticUtil.h"
@@ -57,7 +58,6 @@ using namespace clang::ast_matchers;
 
 // Declaration of used methods.
 void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Tool);
-void writeChangesToOutput(Rewriter* rewriter, std::string subfolderPrefix, int version);
 
 // CommonOptionsParser declares HelpMessage with a description of the common
 // command-line options related to the compilation database and input files.
@@ -78,7 +78,7 @@ typedef struct structOrdering_ {
     std::vector<int> chosen;
 } StructOrdering;
 
-
+// Method used for the structreordering semantic transformation.
 void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Tool) {
 
     // Debug information.
@@ -120,16 +120,31 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
     // We choose the amount of configurations of this struct that is required.
     while (amountChosen < amount)
     {
+        // Things we should write to an output file.
+        Json::Value output;
+
         // We choose a struct at random.
         it = structMap.begin();
         std::advance(it, random_0_to_n(structMap.size()));
         StructData* chosenStruct = it->second;
 
+        // Output name.
+        output["struct_reordering"]["file_struct_name"] = chosenStruct->getName();
+        output["struct_reordering"]["file_name"] = chosenStruct->getFileName();
+        Json::Value vec(Json::arrayValue);
+
         // We determine a random ordering of fields.
         std::vector<int> ordering;
         for (int i = 0; i < chosenStruct->getFieldDataSize(); i++) {
+            Json::Value field;
+            FieldData data = chosenStruct->getFieldData()[i];
+            field["position"] = data.position;
+            field["name"] = data.fieldName;
+            field["type"] = data.fieldType;
+            vec.append(field);
             ordering.push_back(i);
         }
+        output["struct_reordering"]["original"]["fields"] = vec;
         std::random_shuffle(ordering.begin(), ordering.end());
 
         // We check if the struct/reordering already exists.
@@ -153,6 +168,7 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
         llvm::outs() << "Chosen struct: " << orderingStruct.name << "\n";
         llvm::outs() << "Chosen ordering: " << "\n";
         {
+
             std::vector<int>::iterator it;
             for (it = orderingStruct.chosen.begin(); it != orderingStruct.chosen.end(); ++it) {
                 llvm::outs() << *it << " ";
@@ -161,29 +177,44 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
         }
 
         // We create new structData information.
-        StructData* structData = new StructData(chosenStruct->getName());
+        StructData* structData = new StructData(chosenStruct->getName(), chosenStruct->getFileName());
 
         // We obtain all field types.
         std::vector<FieldData> fieldData = chosenStruct->getFieldData();
 
         // We select the fields according to the given ordering.
         std::vector<int>::iterator itTwo;
-        for (itTwo = ordering.begin(); itTwo != ordering.end(); ++itTwo) {
+        {
+            Json::Value vec(Json::arrayValue);
+            int i = 0;
+            for (itTwo = ordering.begin(); itTwo != ordering.end(); ++itTwo) {
 
-            // The chosen field.
-            int position = *itTwo;
-            FieldData chosenField = fieldData[position];
-            structData->addFieldData(chosenField.position,
-                                    chosenField.fieldName,
-                                    chosenField.fieldType,
-                                    chosenField.sourceRange);
+                // The chosen field.
+                Json::Value field;
+                int position = *itTwo;
+                FieldData chosenField = fieldData[position];
+                structData->addFieldData(chosenField.position,
+                                        chosenField.fieldName,
+                                        chosenField.fieldType,
+                                        chosenField.sourceRange);
+                field["original_position"] = position;
+                field["name"] = chosenField.fieldName;
+                field["type"] = chosenField.fieldType;
+                vec.append(field);
+                i++;
+            }
+            output["struct_reordering"]["modified"]["fields"] = vec;
         }
 
         // We add the modified structure information to our semantic data.
         semanticData->getStructReordering()->addStructReorderingData(chosenStruct->getName(), structData);
 
-        // We run the rewriter tool.
+        std::string outputPrefix = OutputDirectory + "/struct_r_";
         int result = Tool->run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, false, amountChosen+1, OutputDirectory + "/struct_r_", BaseDirectory));
+
+        // We run the rewriter tool.
+        // We write some information regarding the performed transformations to output.
+        writeJSONToFile(outputPrefix, amountChosen+1, "transformations.json", output);
 
         // We clear the structure reodering map.
         // And add the ordering structure to the chosen vector.
@@ -195,6 +226,7 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
         amountChosen++;
     }
 }
+
 
 // Entry point of our tool.
 int main(int argc, const char **argv) {
