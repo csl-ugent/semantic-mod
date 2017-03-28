@@ -27,11 +27,14 @@ class SemanticAnalyser : public clang::RecursiveASTVisitor<SemanticAnalyser> {
 private:
     clang::ASTContext *astContext; // Used for getting additional AST info.
     SemanticData* semanticData;
+    std::string baseDirectory;
 public:
     explicit SemanticAnalyser(clang::CompilerInstance *CI,
-                              SemanticData* semanticData)
+                              SemanticData* semanticData,
+                              std::string baseDirectory)
       : astContext(&(CI->getASTContext())),
-        semanticData(semanticData) // Initialize private members.
+        semanticData(semanticData), // Initialize private members.
+        baseDirectory(baseDirectory)
     { }
 
     // Detection of record declarations (can be structs, unions or classes).
@@ -70,20 +73,23 @@ private:
     clang::Rewriter* rewriter;
     bool analysis;
     clang::CompilerInstance *CI;
+    std::string baseDirectory;
 public:
     // Override the constructor in order to pass CI.
     explicit SemanticAnalyserASTConsumer(clang::CompilerInstance *CI,
                                          SemanticData* semanticData,
                                          clang::Rewriter* rewriter,
-                                         bool analysis)
+                                         bool analysis,
+                                         std::string baseDirectory)
         : semanticData(semanticData),
           rewriter(rewriter), // Initialize the visitor
           analysis(analysis),
-          CI(CI)
+          CI(CI),
+          baseDirectory(baseDirectory)
     {
         // Visitor depends on the fact we are analysing or not.
         if (this->analysis) {
-            visitorAnalysis = new SemanticAnalyser(this->CI, semanticData);
+            visitorAnalysis = new SemanticAnalyser(this->CI, semanticData, baseDirectory);
         } else {
             visitorRewriter = new SemanticRewriter(this->CI, semanticData, rewriter);
         }
@@ -128,7 +134,7 @@ private:
     std::string outputPrefix;
     std::string baseDirectory;
 public:
-    SemanticAnalyserFrontendActionFactory(SemanticData* semanticData, clang::Rewriter* rewriter, bool analysis, int version = 0, std::string outputPrefix = "", std::string baseDirectory = "")
+    SemanticAnalyserFrontendActionFactory(SemanticData* semanticData, clang::Rewriter* rewriter, bool analysis, std::string baseDirectory, int version = 0, std::string outputPrefix = "")
         : semanticData(semanticData),
           rewriter(rewriter),
           analysis(analysis),

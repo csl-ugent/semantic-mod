@@ -210,7 +210,7 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
         semanticData->getStructReordering()->addStructReorderingData(chosenStruct->getName(), structData);
 
         std::string outputPrefix = OutputDirectory + "/struct_r_";
-        int result = Tool->run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, false, amountChosen+1, OutputDirectory + "/struct_r_", BaseDirectory));
+        int result = Tool->run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, false, BaseDirectory, amountChosen+1, OutputDirectory + "/struct_r_"));
 
         // We run the rewriter tool.
         // We write some information regarding the performed transformations to output.
@@ -240,6 +240,17 @@ int main(int argc, const char **argv) {
     // Initialize the Tool.
     ClangTool Tool(OptionsParser.getCompilations(), srcPathList);
 
+    std::vector<CompileCommand>::iterator it;
+    for (it = OptionsParser.getCompilations().getAllCompileCommands().begin(); it != OptionsParser.getCompilations().getAllCompileCommands().end(); ++it) {
+        CompileCommand command = *it;
+
+        std::vector<std::string>::iterator it2;
+
+        for (it2 = command.CommandLine.begin(); it2 != command.CommandLine.end(); ++it2) {
+            llvm::outs() << "Command line: " << *it2 << "\n";
+        }
+    }
+
     // The data that will be available after the analysis phase.
     SemanticData* semanticData = new SemanticData();
 
@@ -248,7 +259,7 @@ int main(int argc, const char **argv) {
 
     // PHASE ONE: analysis of the source code (semantic analyser).
     llvm::outs() << "Phase one: analysis phase...\n";
-    int result = Tool.run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, true));
+    int result = Tool.run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, true, BaseDirectory));
 
     // PHASE TWO: applying the semantic modifications.
     llvm::outs() << "Phase two: applying semantic modifications... \n";

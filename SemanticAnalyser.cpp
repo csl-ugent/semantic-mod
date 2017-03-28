@@ -28,7 +28,27 @@ bool SemanticAnalyser::VisitRecordDecl(RecordDecl *D) {
         StringRef fileNameRef = astContext->getSourceManager().getFilename(
             D->getLocation());
 
-        std::string fileNameStr = std::string(fileNameRef.data());
+        std::string fileNameStr;
+        if (fileNameRef.data()) {
+            fileNameStr = std::string(fileNameRef.data());
+
+            llvm::outs() << "Searching for: " << this->baseDirectory << " in: " << fileNameStr << "\n";
+            llvm::outs() << "Result: " << fileNameStr.find(this->baseDirectory) << "\n";
+
+            // We make sure the file is contained in our base directory...
+            if (fileNameStr.find(this->baseDirectory) == std::string::npos) {
+
+                // Declaration is not contained in a header located in
+                // the base directory...
+                return true;
+            }
+        } else {
+
+            // Invalid struct to analyse... (header name cannot be found?)
+            return true;
+        }
+        llvm::outs() << "Filename: " << fileNameStr << "\n";
+
         StructData* structData = new StructData(structName, fileNameStr);
 
         // Analysing the members of the structure.
@@ -140,7 +160,7 @@ void SemanticAnalyserASTConsumer::HandleTranslationUnit(ASTContext &Context) {
 
 // Semantic analyser frontend action: action that will start the consumer.
 ASTConsumer* SemanticAnalyserFrontendAction::CreateASTConsumer(CompilerInstance &CI, StringRef file) {
-    return new SemanticAnalyserASTConsumer(&CI, this->semanticData, this->rewriter, this->analysis);
+    return new SemanticAnalyserASTConsumer(&CI, this->semanticData, this->rewriter, this->analysis, this->baseDirectory);
 }
 
 // Semantic analyser frontend action: action that will start the consumer.
