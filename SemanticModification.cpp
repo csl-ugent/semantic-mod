@@ -129,8 +129,9 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
         StructData* chosenStruct = it->second;
 
         // Output name.
-        output["struct_reordering"]["file_struct_name"] = chosenStruct->getName();
-        output["struct_reordering"]["file_name"] = chosenStruct->getFileName();
+        output["type"] = "struct_reordering";
+        output["file_struct_name"] = chosenStruct->getName();
+        output["file_name"] = chosenStruct->getFileName();
         Json::Value vec(Json::arrayValue);
 
         // We determine a random ordering of fields.
@@ -144,7 +145,7 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
             vec.append(field);
             ordering.push_back(i);
         }
-        output["struct_reordering"]["original"]["fields"] = vec;
+        output["original"]["fields"] = vec;
         std::random_shuffle(ordering.begin(), ordering.end());
 
         // We check if the struct/reordering already exists.
@@ -203,7 +204,7 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
                 vec.append(field);
                 i++;
             }
-            output["struct_reordering"]["modified"]["fields"] = vec;
+            output["modified"]["fields"] = vec;
         }
 
         // We add the modified structure information to our semantic data.
