@@ -198,7 +198,7 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
                                         chosenField.fieldName,
                                         chosenField.fieldType,
                                         chosenField.sourceRange);
-                field["original_position"] = position;
+                field["position"] = i;
                 field["name"] = chosenField.fieldName;
                 field["type"] = chosenField.fieldType;
                 vec.append(field);
