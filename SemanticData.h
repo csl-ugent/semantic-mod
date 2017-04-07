@@ -68,6 +68,9 @@ private:
     // Set containing all structs that have been rewritten already.
     std::set<std::string> rewritten;
 
+    // Set containing all structs that will be reordered over all versions.
+    std::set<std::string> futureStructReorderings;
+
 public:
 
     explicit StructReordering() {}

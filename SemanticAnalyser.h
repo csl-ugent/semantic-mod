@@ -22,6 +22,8 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/LangOptions.h"
 
+std::string stmt2str(clang::Stmt *stm, clang::SourceManager* sm, const clang::LangOptions* lopt);
+
 // Semantic analyser, willl analyse different nodes within the AST.
 class SemanticAnalyser : public clang::RecursiveASTVisitor<SemanticAnalyser> {
 private:
@@ -61,6 +63,9 @@ public:
 
     // Detection of record declarations (can be structs, unions or classes).
     virtual bool VisitRecordDecl(clang::RecordDecl *D);
+
+    // Detection of variable declarations.
+    virtual bool VisitDeclStmt(clang::DeclStmt *D);
 };
 
 // Semantic analyser AST consumer: will apply the semantic analysers

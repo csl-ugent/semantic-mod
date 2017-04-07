@@ -1,7 +1,19 @@
 #include "SemanticAnalyser.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang;
 using namespace llvm;
+
+std::string stmt2str(clang::Stmt *stm, SourceManager* sm, const LangOptions* lopt) {
+    clang::SourceLocation b(stm->getLocStart()), _e(stm->getLocEnd());
+    if (b.isMacroID())
+        b = sm->getSpellingLoc(b);
+    if (_e.isMacroID())
+        _e = sm->getSpellingLoc(_e);
+    clang::SourceLocation e(clang::Lexer::getLocForEndOfToken(_e, 0, *sm, *lopt));
+    return std::string(sm->getCharacterData(b),
+        sm->getCharacterData(e)-sm->getCharacterData(b));
+}
 
 // AST visitor, used for analysis.
 bool SemanticAnalyser::VisitRecordDecl(RecordDecl *D) {
@@ -16,7 +28,6 @@ bool SemanticAnalyser::VisitRecordDecl(RecordDecl *D) {
         // If we didn't found this struct before, we add an entry for it.
         StructReordering* structReordering = this->semanticData->getStructReordering();
         if (structReordering->isInStructMap(structName)) {
-            llvm::outs() << "Structure: " << structName << " already analysed.\n";
             return true; // Structure already analysed...
         } else {
             // Some debug information.
@@ -31,9 +42,6 @@ bool SemanticAnalyser::VisitRecordDecl(RecordDecl *D) {
         std::string fileNameStr;
         if (fileNameRef.data()) {
             fileNameStr = std::string(fileNameRef.data());
-
-            llvm::outs() << "Searching for: " << this->baseDirectory << " in: " << fileNameStr << "\n";
-            llvm::outs() << "Result: " << fileNameStr.find(this->baseDirectory) << "\n";
 
             // We make sure the file is contained in our base directory...
             if (fileNameStr.find(this->baseDirectory) == std::string::npos) {
@@ -73,6 +81,102 @@ bool SemanticAnalyser::VisitRecordDecl(RecordDecl *D) {
     return true;
 }
 
+// AST visitor, used for rewriting.
+bool SemanticRewriter::VisitDeclStmt(clang::DeclStmt *DeclStmt){
+    // We need to know if the type is a struct.
+    // The type of struct is what we are actually reordering.
+    // Add information to structreordering:
+    // - Structure that needs to have init function.
+    // - + all the structure information.
+
+    clang::DeclStmt::decl_iterator it;
+    for(it = DeclStmt->decl_begin(); it != DeclStmt->decl_end(); ++it) {
+
+        Decl* decl = *it;
+
+        // We check if the Decl is a VarDecl.
+        if (VarDecl* D = dyn_cast<VarDecl>(decl)) {
+
+            // Make sure the VarDeclr has an initializer.
+            if (D->hasInit()) {
+
+                // The initializer was actually an InitListExpr.
+                if (InitListExpr* init = dyn_cast<InitListExpr>(D->getInit())) {
+
+                    // We obtain the type information.
+                    QualType qualType = D->getType();
+                    const Type* type = qualType.getTypePtrOrNull();
+
+                    // We need to make sure the type is a struct and the struct type
+                    // Is actually rewritten.
+                    if (type != NULL && type->isStructureType()) {
+
+                        // We try to obtain the TagDecl.
+                        TagDecl* tagDecl = type->getAsTagDecl();
+
+                        if (tagDecl != NULL) {
+
+                            // We analyse the structure name.
+                            std::string structName = tagDecl->getNameAsString();
+                            std::string identifierName = D->getNameAsString();
+
+                            // We check if this structure is being reordened or not.
+                            StructReordering* structReordering = this->semanticData->getStructReordering();
+                            if (structReordering->isInStructReorderingMap(structName)) {
+
+                                // We have to rewrite this type of initialization.
+                                llvm::outs() << "Found var declr: " << D->getNameAsString() << " type: " << D->getType().getAsString() << '\n';
+                                llvm::outs() << "Type info: " << tagDecl->getNameAsString() << "\n";
+
+                                // We obtain the struct data/field data for the given struct.
+                                StructData* structData = structReordering->getStructMap()[structName];
+                                std::vector<FieldData> fieldData = structData->getFieldData();
+
+                                // Building of replacement string.
+                                std::stringstream replacements;
+                                replacements << " {";
+
+                                clang::InitListExpr::iterator it;
+                                int i = 0; // Field # we are iterating over.
+                                for (it = init->begin(); it != init->end(); ++it) {
+
+                                    // Obtain the corresponding statement.
+                                    Stmt* initStmt = *it;
+
+                                    // The content of the statement.
+                                    std::string fieldContent = stmt2str(initStmt, &astContext->getSourceManager(), &astContext->getLangOpts());
+
+                                    // Field data for this statement.
+                                    FieldData data = fieldData[i];
+                                    replacements << identifierName << "." << data.fieldName << " = " << fieldContent << ";";
+
+                                    // Advance field #.
+                                    i++;
+                                }
+
+                                // Make it a valid string.
+                                replacements << "} // Automatically generated by semantic-mod tool.";
+                                std::string replacement = replacements.str();
+
+                                this->rewriter->RemoveTextAfterToken(SourceRange(D->getLocation(), init->getRBraceLoc()));
+                                this->rewriter->InsertTextAfterToken(DeclStmt->getEndLoc(), replacement);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        //this->rewriter->InsertTextAfterToken(DeclStmt->getEndLoc(), "{operation1.id=1377;operation1.value=1377.0;operation1.name=\"LUL\"}");
+    }
+
+
+
+
+    //this->rewriter->ReplaceText(D->getSourceRange(), "REPLACED");
+    //this->rewriter->ReplaceText(SourceRange(S->getLBraceLoc(), S->getRBraceLoc()), "REPLACEMENT");
+    return true;
+}
 
 // AST visitor, used for rewriting the source code.
 bool SemanticRewriter::VisitRecordDecl(RecordDecl *D) {
@@ -83,21 +187,14 @@ bool SemanticRewriter::VisitRecordDecl(RecordDecl *D) {
         // We analyse the structure name.
         std::string structName = D->getNameAsString();
 
-        // Debug
-        llvm::outs() << "(Rewriting) considering structure: " << structName << "\n";
-
         StructReordering* structReordering = this->semanticData->getStructReordering();
         if (structReordering->isInStructReorderingMap(structName)) {
 
             // We make sure we do not rewrite some structure that has already
             // been rewritten.
             if (structReordering->hasBeenRewritten(structName)) {
-                llvm::outs() << "(Rewriting) structure: "<< structName << " has been rewritten already. \n";
                 return true;
             }
-
-            // Debug
-            llvm::outs() << "(Rewriting) this structure should be rewritten!\n";
 
             // We need to rewrite it.
             StructData* structData = structReordering->getStructReorderings()[structName];
@@ -222,8 +319,6 @@ void SemanticAnalyserFrontendAction::writeChangesToOutput() {
         outputFile.open(outputPath.c_str());
         StringRef MB = rewriter->getSourceMgr().getBufferData(I->first);
         std::string content = std::string(MB.data());
-        llvm::outs() << "Changes: " << output.c_str() << "\n";
-
         outputFile.write(output.c_str(), output.length());
         outputFile.close();
     }
