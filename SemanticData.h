@@ -24,6 +24,7 @@ typedef struct fieldData_ {
 
 } FieldData;
 
+
 // Structure AST data.
 class StructData {
 private:
@@ -68,8 +69,8 @@ private:
     // Set containing all structs that have been rewritten already.
     std::set<std::string> rewritten;
 
-    // Set containing all structs that will be reordered over all versions.
-    std::set<std::string> futureStructReorderings;
+    // Set containing all struct names that should be rewritten.
+    std::set<std::string> structNeedRewritten;
 
 public:
 
@@ -91,6 +92,9 @@ public:
     // Check if a struct has been rewritten already.
     bool hasBeenRewritten(std::string name);
 
+    // Check if a struct needs to be rewritten.
+    bool needsToBeRewritten(std::string name);
+
     // Method used to add structure data to the struct data map.
     // This object will take ownership of the allocated memory and release
     // it when necessary.
@@ -99,12 +103,15 @@ public:
     // Method used to add structure reordering data to the structure reordering
     // information map.
     void addStructReorderingData(std::string name, StructData* data);
-
+    
     // Method used to add a structure to the set of rewritten structs.
     void structRewritten(std::string name);
 
+    // Method used to add a structure that needs to be rewritten.
+    void addStructNeedRewritten(std::string name);
+
     // Method used to clear the structure reordering information map.
-    void clearStructReorderings();
+    void clearNeedsRewritten();
 
     // Clear the set of structures that have been rewritten already.
     void clearRewritten();
@@ -115,10 +122,21 @@ public:
 class SemanticData {
 private:
 
+    // The path to the main file.
+    std::string mainFilePath;
+
     // Structreordering information.
     StructReordering* structReordering;
 
 public:
+
+    // Get path to the main file.
+    std::string getMainFilePath() { return this->mainFilePath; }
+
+    // Method to set the main file path.
+    void setMainFilePath(std::string mainFilePath) {
+        this->mainFilePath = mainFilePath;
+    }
 
     explicit SemanticData() {
 

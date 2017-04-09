@@ -13,10 +13,17 @@ bool StructReordering::isInStructReorderingMap(std::string name) {
     return !(this->structReorderings.find(name) == this->structReorderings.end());
 }
 
+
 bool StructReordering::hasBeenRewritten(std::string name) {
 
     // We check if the name is already defined in the set or not.
     return !(this->rewritten.find(name) == this->rewritten.end());
+}
+
+bool StructReordering::needsToBeRewritten(std::string name) {
+
+    // We check if the name is already defined in the set or not.
+    return !(this->structNeedRewritten.find(name) == this->structNeedRewritten.end());
 }
 
 void StructReordering::addStructData(std::string name, StructData* data) {
@@ -36,6 +43,9 @@ void StructReordering::structRewritten(std::string name) {
     this->rewritten.insert(name);
 }
 
+void StructReordering::addStructNeedRewritten(std::string name) {
+    this->structNeedRewritten.insert(name);
+}
 
 StructReordering::~StructReordering() {
 
@@ -62,21 +72,13 @@ void StructData::addFieldData(int position, std::string fieldName, std::string f
 }
 
 
-void StructReordering::clearStructReorderings() {
+void StructReordering::clearNeedsRewritten() {
 
-    // We deallocate all allocated memory.
-    std::map<std::string, StructData*>::iterator it;
-
-    // We free the memory.
-    for (it = this->structReorderings.begin(); it != this->structReorderings.end(); it++ )
-    {
-        // We delete the allocated StructData objects.
-        delete it->second;
-    }
-
-    // We empty (clear) the map itself...
-    this->structReorderings.clear();
+    // We empty (clear) the set itself...
+    this->structNeedRewritten.clear();
 }
+
+
 
 void StructReordering::clearRewritten() {
     this->rewritten.clear();

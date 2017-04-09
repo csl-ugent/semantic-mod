@@ -179,6 +179,9 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
             llvm::outs() << "\n";
         }
 
+        // We create new structData information.
+        StructData* structData = new StructData(chosenStruct->getName(), chosenStruct->getFileName());
+
         // We obtain all field types.
         std::vector<FieldData> fieldData = chosenStruct->getFieldData();
 
@@ -193,6 +196,10 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
                 Json::Value field;
                 int position = *itTwo;
                 FieldData chosenField = fieldData[position];
+                structData->addFieldData(chosenField.position,
+                                        chosenField.fieldName,
+                                        chosenField.fieldType,
+                                        chosenField.sourceRange);
                 field["position"] = i;
                 field["name"] = chosenField.fieldName;
                 field["type"] = chosenField.fieldType;
@@ -201,6 +208,9 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
             }
             output["modified"]["fields"] = vec;
         }
+
+        // We add the modified structure information to our semantic data.
+        semanticData->getStructReordering()->addStructReorderingData(chosenStruct->getName(), structData);
 
         // We write some information regarding the performed transformations to output.
         writeJSONToFile(outputPrefix, amountChosen+1, "transformations.json", output);
@@ -211,6 +221,10 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
         amountChosen++;
     }
 
+    // We perform some transformation analysis.
+    llvm::outs() << "Phase 2.1: performing post transformation analysis.\n";
+    int result = Tool->run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, TRANSFORMATION_ANALYSIS, BaseDirectory));
+
     // We perform the rewrite operations.
     int processed = 0;
     while (processed < amount)
@@ -220,37 +234,16 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
         StructOrdering selectedStructOrdering = chosen[processed];
         StructData* chosenStruct = selectedStructOrdering.chosenStruct;
 
-        // We create new structData information.
-        StructData* structData = new StructData(chosenStruct->getName(), chosenStruct->getFileName());
+        // We add the name of the struct that needs to be rewritten.
+        semanticData->getStructReordering()->addStructNeedRewritten(chosenStruct->getName());
 
-        // We obtain all field types.
-        std::vector<FieldData> fieldData = chosenStruct->getFieldData();
+        llvm::outs() << "Phase 2.2: performing rewrite for version: " << processed + 1 << "\n";
+        int result = Tool->run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, REWRITE, BaseDirectory, processed+1, outputPrefix));
 
-        // We select the fields according to the given ordering.
-        std::vector<int>::iterator itTwo;
-        {
-            int i = 0;
-            for (itTwo = ordering.begin(); itTwo != ordering.end(); ++itTwo) {
-
-                int position = *itTwo;
-                FieldData chosenField = fieldData[position];
-                structData->addFieldData(chosenField.position,
-                                        chosenField.fieldName,
-                                        chosenField.fieldType,
-                                        chosenField.sourceRange);
-                i++;
-            }
-        }
-
-        // We add the modified structure information to our semantic data.
-        semanticData->getStructReordering()->addStructReorderingData(chosenStruct->getName(), structData);
-
-        int result = Tool->run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, false, BaseDirectory, processed+1, outputPrefix));
-
-        // We clear the structure reodering map.
         // We need to clear the set of structures that have been rewritten already.
+        // We need to clear the set of structures that need to be rewritten.
         semanticData->getStructReordering()->clearRewritten();
-        semanticData->getStructReordering()->clearStructReorderings();
+        semanticData->getStructReordering()->clearNeedsRewritten();
         processed++;
     }
 }
@@ -287,7 +280,7 @@ int main(int argc, const char **argv) {
 
     // PHASE ONE: analysis of the source code (semantic analyser).
     llvm::outs() << "Phase one: analysis phase...\n";
-    int result = Tool.run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, true, BaseDirectory));
+    int result = Tool.run(new SemanticAnalyserFrontendActionFactory(semanticData, rewriter, ANALYSIS, BaseDirectory));
 
     // PHASE TWO: applying the semantic modifications.
     llvm::outs() << "Phase two: applying semantic modifications... \n";

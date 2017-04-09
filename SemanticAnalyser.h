@@ -22,7 +22,12 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/LangOptions.h"
 
+// General functions.
 std::string stmt2str(clang::Stmt *stm, clang::SourceManager* sm, const clang::LangOptions* lopt);
+std::string handleStructInitsRecursively(clang::InitListExpr* init, const clang::Type* field, std::string currentIdentifier, SemanticData* semanticData, clang::ASTContext* context, bool* shouldBeRewritten, int currentDepth, int* arrayDepth, std::stringstream* arraySizeAddition);
+
+// Type of visitor.
+enum visitorType { ANALYSIS, TRANSFORMATION_ANALYSIS, REWRITE};
 
 // Semantic analyser, willl analyse different nodes within the AST.
 class SemanticAnalyser : public clang::RecursiveASTVisitor<SemanticAnalyser> {
@@ -41,6 +46,24 @@ public:
 
     // Detection of record declarations (can be structs, unions or classes).
     virtual bool VisitRecordDecl(clang::RecordDecl *D);
+};
+
+
+// Semantic transformation analyser, willl analyse different nodes within the AST (after transformation information).
+class SemanticTransformationAnalyser : public clang::RecursiveASTVisitor<SemanticTransformationAnalyser> {
+private:
+    clang::ASTContext *astContext; // Used for getting additional AST info.
+    SemanticData* semanticData;
+public:
+    explicit SemanticTransformationAnalyser(clang::CompilerInstance *CI,
+                              SemanticData* semanticData)
+      : astContext(&(CI->getASTContext())),
+        semanticData(semanticData) // Initialize private members.
+    { }
+
+
+    // Detection of translation unit declarations.
+    virtual bool VisitTranslationUnitDecl(clang::TranslationUnitDecl* TD);
 };
 
 
@@ -73,10 +96,11 @@ public:
 class SemanticAnalyserASTConsumer : public clang::ASTConsumer {
 private:
     SemanticRewriter *visitorRewriter;
+    SemanticTransformationAnalyser *transformationAnalyser;
     SemanticAnalyser *visitorAnalysis;
     SemanticData* semanticData;
     clang::Rewriter* rewriter;
-    bool analysis;
+    visitorType type;
     clang::CompilerInstance *CI;
     std::string baseDirectory;
 public:
@@ -84,18 +108,20 @@ public:
     explicit SemanticAnalyserASTConsumer(clang::CompilerInstance *CI,
                                          SemanticData* semanticData,
                                          clang::Rewriter* rewriter,
-                                         bool analysis,
+                                         visitorType type,
                                          std::string baseDirectory)
         : semanticData(semanticData),
           rewriter(rewriter), // Initialize the visitor
-          analysis(analysis),
+          type(type),
           CI(CI),
           baseDirectory(baseDirectory)
     {
         // Visitor depends on the fact we are analysing or not.
-        if (this->analysis) {
+        if (type == ANALYSIS) {
             visitorAnalysis = new SemanticAnalyser(this->CI, semanticData, baseDirectory);
-        } else {
+        } else if (type == TRANSFORMATION_ANALYSIS) {
+            transformationAnalyser = new SemanticTransformationAnalyser(this->CI, semanticData);
+        } else if (type == REWRITE) {
             visitorRewriter = new SemanticRewriter(this->CI, semanticData, rewriter);
         }
     }
@@ -109,15 +135,15 @@ class SemanticAnalyserFrontendAction : public clang::ASTFrontendAction {
 private:
     SemanticData* semanticData;
     clang::Rewriter* rewriter;
-    bool analysis;
+    visitorType type;
     int version;
     std::string outputPrefix;
     std::string baseDirectory;
 public:
-    explicit SemanticAnalyserFrontendAction(SemanticData* semanticData, clang::Rewriter* rewriter, bool analysis, int version, std::string outputPrefix, std::string baseDirectory)
+    explicit SemanticAnalyserFrontendAction(SemanticData* semanticData, clang::Rewriter* rewriter, visitorType type, int version, std::string outputPrefix, std::string baseDirectory)
     : semanticData(semanticData),
       rewriter(rewriter),
-      analysis(analysis),
+      type(type),
       version(version),
       outputPrefix(outputPrefix),
       baseDirectory(baseDirectory)
@@ -134,15 +160,15 @@ class SemanticAnalyserFrontendActionFactory : public clang::tooling::FrontendAct
 private:
     SemanticData* semanticData;
     clang::Rewriter* rewriter;
-    bool analysis;
+    visitorType type;
     int version;
     std::string outputPrefix;
     std::string baseDirectory;
 public:
-    SemanticAnalyserFrontendActionFactory(SemanticData* semanticData, clang::Rewriter* rewriter, bool analysis, std::string baseDirectory, int version = 0, std::string outputPrefix = "")
+    SemanticAnalyserFrontendActionFactory(SemanticData* semanticData, clang::Rewriter* rewriter, visitorType type, std::string baseDirectory, int version = 0, std::string outputPrefix = "")
         : semanticData(semanticData),
           rewriter(rewriter),
-          analysis(analysis),
+          type(type),
           version(version),
           outputPrefix(outputPrefix),
           baseDirectory(baseDirectory)

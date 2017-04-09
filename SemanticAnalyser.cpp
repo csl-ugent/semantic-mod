@@ -15,6 +15,158 @@ std::string stmt2str(clang::Stmt *stm, SourceManager* sm, const LangOptions* lop
         sm->getCharacterData(e)-sm->getCharacterData(b));
 }
 
+std::string handleStructInitsRecursively(InitListExpr* init, const Type* type, std::string currentIdentifier, SemanticData* semanticData, ASTContext* astContext, bool* shouldBeRewritten, int currentDepth, int* arrayDepth, std::stringstream* arraySizeAddition) {
+
+    // The replacement string we are building.
+    std::stringstream replacementstr;
+
+    // We check if the original declaration is a struct type.
+    if (type != NULL && type->isStructureType()) {
+
+        // Extra things coming....
+        replacementstr << "\n";
+
+        // We try to obtain the TagDecl.
+        TagDecl* tagDecl = type->getAsTagDecl();
+
+        if (tagDecl != NULL) {
+
+            // Retrieve struct reordering information.
+            StructReordering* structReordering = semanticData->getStructReordering();
+
+            // We obtain the name of the struct.
+            std::string structName = tagDecl->getNameAsString();
+
+            // We check if this is a structure and if this structure is being reordened or not.
+            if (!(*shouldBeRewritten) && structReordering->isInStructReorderingMap(structName)) {
+                *shouldBeRewritten = true;
+            }
+
+            clang::InitListExpr::iterator it;
+            RecordDecl::field_iterator jt = type->getAsStructureType()->getDecl()->field_begin();
+
+            for (it = init->begin(); it != init->end(); ++it, ++jt) {
+
+                // Obtain the corresponding statement.
+                Stmt* initStmt = *it;
+
+                // We need to evaluate the current field we are considering.
+                FieldDecl* fieldTwo = *jt;
+
+                // We check if this expression is nested or not.
+                if (InitListExpr* initTwo = dyn_cast<InitListExpr>(initStmt)) {
+
+                    // We obtain the type information.
+                    const Type* typeTwo = (jt->getType()).getTypePtrOrNull();
+
+                    // Handle the initlistexpr recursively.
+                    replacementstr << handleStructInitsRecursively(initTwo, typeTwo, currentIdentifier + "." + fieldTwo->getNameAsString(), semanticData, astContext, shouldBeRewritten, currentDepth+1, arrayDepth, arraySizeAddition);
+
+                } else { // Regular field.
+
+                    // The content of the statement.
+                    std::string fieldContent = stmt2str(initStmt, &astContext->getSourceManager(), &astContext->getLangOpts());
+
+                    // We update the string with a new statement.
+                    if (fieldContent != "") {
+                        replacementstr << currentIdentifier << "." << fieldTwo->getNameAsString() << " = " << fieldContent << ";";
+                    }
+                }
+            }
+        }
+    } else if (type != NULL && type->isUnionType()) { // Handle unions.
+
+        clang::InitListExpr::iterator it;
+        for (it = init->begin(); it != init->end(); ++it) { // Should only be one though...
+
+            // Obtain the corresponding statement.
+            Expr* initExpr = dyn_cast<Expr>(*it);
+
+            // NULL check.
+            if (initExpr != NULL) {
+
+                // We obtain the corresponding type information.
+                QualType exprType = initExpr->getType();
+
+                // Find a FieldDecl with this type.
+                {
+                    RecordDecl::field_iterator jt;
+                    for (jt = type->getAsUnionType()->getDecl()->field_begin(); jt != type->getAsUnionType()->getDecl()->field_end(); ++jt) {
+
+                        // We need to evaluate the current field we are considering.
+                        FieldDecl* fieldTwo = *jt;
+
+                        // We obtain the type information.
+                        const QualType typeTwo = jt->getType();
+
+                        // Found field with same type!
+                        if (exprType == typeTwo) {
+
+                            // We check if this expression is nested or not.
+                            if (InitListExpr* initTwo = dyn_cast<InitListExpr>(initExpr)) {
+
+                                // We obtain the type information.
+                                const Type* typeTwoInf = typeTwo.getTypePtrOrNull();
+
+                                // Handle the initlistexpr recursively.
+                                replacementstr << handleStructInitsRecursively(initTwo, typeTwoInf, currentIdentifier + "." + fieldTwo->getNameAsString(), semanticData, astContext, shouldBeRewritten, currentDepth+1, arrayDepth, arraySizeAddition);
+
+                            } else { // Regular field.
+
+                                // The content of the statement.
+                                std::string fieldContent = stmt2str(initExpr, &astContext->getSourceManager(), &astContext->getLangOpts());
+
+                                // We update the string with a new statement.
+                                if (fieldContent != "") {
+                                    replacementstr << currentIdentifier << "." << fieldTwo->getNameAsString() << " = " << fieldContent << ";";
+                                }
+                            }
+
+                            // Break out of the same type field looking loop.
+                            break;
+                        }
+                    }
+                }
+            } else {
+                llvm::outs() << "Union doesn't have expression field!\n"; // SHOULD NOT HAPPEN.
+            }
+        }
+
+    }  else if (type != NULL && type->isArrayType()) { // Handle arrays.
+
+        if (type->isConstantArrayType() && currentDepth == (*arrayDepth)) {
+            const ConstantArrayType* constType = dyn_cast<ConstantArrayType>(type);
+            (*arraySizeAddition) << "[" << *((constType->getSize()).getRawData()) << "]";
+            (*arrayDepth)++;
+        }
+
+        // Iterate over fields in array.
+        clang::InitListExpr::iterator it;
+        int i = 0;
+        for (it = init->begin(); it != init->end(); ++it) {
+
+            // Obtain the corresponding statement.
+            Stmt* initStmt = *it;
+
+            // We obtain the type information.
+            const Type* typeTwo = (type->getAsArrayTypeUnsafe()->getElementType()).getTypePtrOrNull();
+
+            // We check if this expression is nested or not.
+            if (InitListExpr* initTwo = dyn_cast<InitListExpr>(initStmt)) {
+
+                // Handle the initlistexpr recursively.
+                std::stringstream newIdentifier;
+                newIdentifier << currentIdentifier << "[" << i << "]";
+                replacementstr << handleStructInitsRecursively(initTwo, typeTwo, newIdentifier.str(), semanticData, astContext, shouldBeRewritten, currentDepth+1, arrayDepth, arraySizeAddition);
+            }
+            i++;
+        }
+    }
+
+    // We return the string itself.
+    return replacementstr.str();
+}
+
 // AST visitor, used for analysis.
 bool SemanticAnalyser::VisitRecordDecl(RecordDecl *D) {
 
@@ -55,8 +207,6 @@ bool SemanticAnalyser::VisitRecordDecl(RecordDecl *D) {
             // Invalid struct to analyse... (header name cannot be found?)
             return true;
         }
-        llvm::outs() << "Filename: " << fileNameStr << "\n";
-
         StructData* structData = new StructData(structName, fileNameStr);
 
         // Analysing the members of the structure.
@@ -81,102 +231,131 @@ bool SemanticAnalyser::VisitRecordDecl(RecordDecl *D) {
     return true;
 }
 
-// AST visitor, used for rewriting.
-bool SemanticRewriter::VisitDeclStmt(clang::DeclStmt *DeclStmt){
-    // We need to know if the type is a struct.
-    // The type of struct is what we are actually reordering.
-    // Add information to structreordering:
-    // - Structure that needs to have init function.
-    // - + all the structure information.
+// AST visitor, used for analysis.
+bool SemanticTransformationAnalyser::VisitTranslationUnitDecl(clang::TranslationUnitDecl* TD) {
 
-    clang::DeclStmt::decl_iterator it;
-    for(it = DeclStmt->decl_begin(); it != DeclStmt->decl_end(); ++it) {
+    clang::DeclContext::decl_iterator it;
+    for(it = TD->decls_begin(); it != TD->decls_end(); ++it) {
 
+        // Current delcaration we are considering.
         Decl* decl = *it;
 
-        // We check if the Decl is a VarDecl.
-        if (VarDecl* D = dyn_cast<VarDecl>(decl)) {
+        // We check if the Decl is a FunctionDecl.
+        if (FunctionDecl* FD = dyn_cast<FunctionDecl>(decl)) {
 
-            // Make sure the VarDeclr has an initializer.
+            // We try to find the function name "main".
+            std::string functionName = FD->getNameAsString();
+            if (functionName == "main") {
+
+                // Try to find the file in which this function is located.
+                StringRef fileNameRef = astContext->getSourceManager().getFilename(FD->getLocation());
+                std::string fileNameStr = std::string(fileNameRef.data());
+
+                // Debug
+                llvm::outs() << "Found main function in file: " << fileNameStr << "\n";
+
+                // Set the main file path.
+                semanticData->setMainFilePath(fileNameStr);
+            }
+        // We look for VarDecl's.
+        } else if (VarDecl* D = dyn_cast<VarDecl>(decl)) {
+
+            // Whenever he has an initializer.
             if (D->hasInit()) {
 
-                // The initializer was actually an InitListExpr.
+                // Identifier name.
+                std::string identifierName = D->getNameAsString();
+
+                // Variable to keep track if we should rewrite this or not.
+                bool shouldBeRewritten = false;
+
+                // The replacement string we are building (in case it should be rewritten).
+                std::stringstream replacementstr;
+                std::stringstream arraySizeAddition;
+                int arrayDepth = 0;
+                replacementstr << "\n\n{";
+
+                // Initializer was actually an InitListExpr.
                 if (InitListExpr* init = dyn_cast<InitListExpr>(D->getInit())) {
 
                     // We obtain the type information.
-                    QualType qualType = D->getType();
-                    const Type* type = qualType.getTypePtrOrNull();
+                    const Type* type = (D->getType()).getTypePtrOrNull();
+                    replacementstr << handleStructInitsRecursively(init, type, identifierName, this->semanticData, this->astContext, &shouldBeRewritten, 0, &arrayDepth, &arraySizeAddition);
+                }
 
-                    // We need to make sure the type is a struct and the struct type
-                    // Is actually rewritten.
-                    if (type != NULL && type->isStructureType()) {
+                replacementstr << "\n} // Initialisation rewritten by semantic-mod tool. \n";
 
-                        // We try to obtain the TagDecl.
-                        TagDecl* tagDecl = type->getAsTagDecl();
+                // DEBUG.
+                if (shouldBeRewritten) {
+                    llvm::outs() << "(Structreordering) global variable: " << identifierName << " needs a transformation!\n";
+                    llvm::outs() << "Replacement: " << replacementstr.str() << "\n";
+                }
+            }
 
-                        if (tagDecl != NULL) {
+        }
+    }
+    return true;
+}
 
-                            // We analyse the structure name.
-                            std::string structName = tagDecl->getNameAsString();
-                            std::string identifierName = D->getNameAsString();
+// AST visitor, used for rewriting.
+bool SemanticRewriter::VisitDeclStmt(clang::DeclStmt *DeclStmt) {
 
-                            // We check if this structure is being reordened or not.
-                            StructReordering* structReordering = this->semanticData->getStructReordering();
-                            if (structReordering->isInStructReorderingMap(structName)) {
+    // Vars used.
+    clang::DeclStmt::decl_iterator it;
+    Decl* decl;
+    VarDecl* D;
+    InitListExpr* init;
 
-                                // We have to rewrite this type of initialization.
-                                llvm::outs() << "Found var declr: " << D->getNameAsString() << " type: " << D->getType().getAsString() << '\n';
-                                llvm::outs() << "Type info: " << tagDecl->getNameAsString() << "\n";
+    // Iterate over all declarations in this DeclStmt.
+    for(it = DeclStmt->decl_begin(); it != DeclStmt->decl_end(); ++it) {
 
-                                // We obtain the struct data/field data for the given struct.
-                                StructData* structData = structReordering->getStructMap()[structName];
-                                std::vector<FieldData> fieldData = structData->getFieldData();
+        // Current declaration.
+        decl = *it;
+        D = dyn_cast<VarDecl>(decl);
 
-                                // Building of replacement string.
-                                std::stringstream replacements;
-                                replacements << " {";
+        // We check if the Decl is a VarDecl / make sure VarDeclr has an initializer.
+        if (D && D->hasInit()) {
 
-                                clang::InitListExpr::iterator it;
-                                int i = 0; // Field # we are iterating over.
-                                for (it = init->begin(); it != init->end(); ++it) {
+            // Identifier name.
+            std::string identifierName = D->getNameAsString();
 
-                                    // Obtain the corresponding statement.
-                                    Stmt* initStmt = *it;
+            // Variable to keep track if we should rewrite this or not.
+            bool shouldBeRewritten = false;
 
-                                    // The content of the statement.
-                                    std::string fieldContent = stmt2str(initStmt, &astContext->getSourceManager(), &astContext->getLangOpts());
+            // The replacement string we are building (in case it should be rewritten).
+            std::stringstream replacementstr;
+            std::stringstream arraySizeAddition;
+            int arrayDepth = 0;
+            replacementstr << "\n{";
 
-                                    // Field data for this statement.
-                                    FieldData data = fieldData[i];
-                                    replacements << identifierName << "." << data.fieldName << " = " << fieldContent << ";";
+            // Initializer was actually an InitListExpr.
+            if (init = dyn_cast<InitListExpr>(D->getInit())) {
 
-                                    // Advance field #.
-                                    i++;
-                                }
+                // We obtain the type information.
+                const Type* type = (D->getType()).getTypePtrOrNull();
+                replacementstr << handleStructInitsRecursively(init, type, identifierName, this->semanticData, this->astContext, &shouldBeRewritten, 0, &arrayDepth, &arraySizeAddition);
 
-                                // Make it a valid string.
-                                replacements << "} // Automatically generated by semantic-mod tool.";
-                                std::string replacement = replacements.str();
+                // Extra ending replacement.
+                replacementstr << "\n} // Initialisation rewritten by semantic-mod tool. \n";
 
-                                this->rewriter->RemoveTextAfterToken(SourceRange(D->getLocation(), init->getRBraceLoc()));
-                                this->rewriter->InsertTextAfterToken(DeclStmt->getEndLoc(), replacement);
-                            }
-                        }
+                // Rewrite operations and DEBUG.
+                if (shouldBeRewritten) {
+
+                    // Rewriting.
+                    this->rewriter->RemoveTextAfterToken(SourceRange(D->getLocation(), init->getRBraceLoc()));
+
+                    if (type != NULL && type->isArrayType() && type->isConstantArrayType()) { // Handle arrays (special case).
+                        this->rewriter->InsertTextAfterToken(D->getLocation(), arraySizeAddition.str());
                     }
+
+                    this->rewriter->InsertTextAfterToken(DeclStmt->getEndLoc(), replacementstr.str());
                 }
             }
         }
-
-        //this->rewriter->InsertTextAfterToken(DeclStmt->getEndLoc(), "{operation1.id=1377;operation1.value=1377.0;operation1.name=\"LUL\"}");
     }
-
-
-
-
-    //this->rewriter->ReplaceText(D->getSourceRange(), "REPLACED");
-    //this->rewriter->ReplaceText(SourceRange(S->getLBraceLoc(), S->getRBraceLoc()), "REPLACEMENT");
     return true;
 }
+
 
 // AST visitor, used for rewriting the source code.
 bool SemanticRewriter::VisitRecordDecl(RecordDecl *D) {
@@ -188,7 +367,7 @@ bool SemanticRewriter::VisitRecordDecl(RecordDecl *D) {
         std::string structName = D->getNameAsString();
 
         StructReordering* structReordering = this->semanticData->getStructReordering();
-        if (structReordering->isInStructReorderingMap(structName)) {
+        if (structReordering->needsToBeRewritten(structName)) {
 
             // We make sure we do not rewrite some structure that has already
             // been rewritten.
@@ -248,23 +427,28 @@ void SemanticAnalyserASTConsumer::HandleTranslationUnit(ASTContext &Context) {
          a single Decl that collectively represents the entire source file */
 
      // Visitor depends on the fact we are analysing or not.
-     if (this->analysis) {
+     if (this->type == ANALYSIS) {
          this->visitorAnalysis->TraverseDecl(Context.getTranslationUnitDecl());
-     } else {
+     } else if (this->type == TRANSFORMATION_ANALYSIS){
+         this->transformationAnalyser->TraverseDecl(Context.getTranslationUnitDecl());
+     } else if (this->type == REWRITE) {
          this->visitorRewriter->TraverseDecl(Context.getTranslationUnitDecl());
      }
 }
 
 // Semantic analyser frontend action: action that will start the consumer.
 ASTConsumer* SemanticAnalyserFrontendAction::CreateASTConsumer(CompilerInstance &CI, StringRef file) {
-    return new SemanticAnalyserASTConsumer(&CI, this->semanticData, this->rewriter, this->analysis, this->baseDirectory);
+    return new SemanticAnalyserASTConsumer(&CI, this->semanticData, this->rewriter, this->type, this->baseDirectory);
 }
 
 // Semantic analyser frontend action: action that will start the consumer.
 void SemanticAnalyserFrontendAction::EndSourceFileAction () {
 
+    // We obtain the filename.
+    std::string fileName = std::string(this->getCurrentFile().data());
+
     // Whenever we are NOT doing analysis we should write out the changes.
-    if (!this->analysis && rewriter->buffer_begin() != rewriter->buffer_end()) {
+    if (this->type == REWRITE && rewriter->buffer_begin() != rewriter->buffer_end()) {
         writeChangesToOutput();
 
         // We need to clear the rewriter's modifications.
@@ -326,5 +510,5 @@ void SemanticAnalyserFrontendAction::writeChangesToOutput() {
 
 // Function used to create the semantic analyser frontend action.
 FrontendAction* SemanticAnalyserFrontendActionFactory::create() {
-    return new SemanticAnalyserFrontendAction(this->semanticData, this->rewriter, this->analysis, this->version, this->outputPrefix, this->baseDirectory);
+    return new SemanticAnalyserFrontendAction(this->semanticData, this->rewriter, this->type, this->version, this->outputPrefix, this->baseDirectory);
 }
