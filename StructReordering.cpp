@@ -149,11 +149,33 @@ void detectStructsRecursively(const Type* type, SemanticData* semanticData) {
         {
             // We obtain the type of the field.
             FieldDecl* field = *jt;
-            const Type* type = (field->getType()).getTypePtrOrNull();
+            const Type* subType = (field->getType()).getTypePtrOrNull();
 
             // We handle the field recursively.
-            detectStructsRecursively(type, semanticData);
+            detectStructsRecursively(subType, semanticData);
         }
+    } else if (type != NULL && type->isUnionType()) { // Handle unions.
+
+        // We obtain the record declaration by considering it as a union type.
+        RecordDecl* recordDecl = type->getAsUnionType()->getDecl();
+
+        // We further investigate the fields of the union.
+        for(RecordDecl::field_iterator jt = recordDecl->field_begin(); jt != recordDecl->field_end();++jt)
+        {
+            // We obtain the type of the field.
+            FieldDecl* field = *jt;
+            const Type* subType = (field->getType()).getTypePtrOrNull();
+
+            // We handle the field recursively.
+            detectStructsRecursively(subType, semanticData);
+        }
+    } else if (type != NULL && type->isArrayType()) { // Handle arrays.
+
+        // We obtain the element type information.
+        const Type* subType = (type->getAsArrayTypeUnsafe()->getElementType()).getTypePtrOrNull();
+
+        // We handle the type recursively.
+        detectStructsRecursively(subType, semanticData);
     }
 }
 
