@@ -36,9 +36,21 @@ private:
 
     // Information regarding the fields within the structure.
     std::vector<FieldData> fieldData;
+
+    // Information regarding possible definitions of fields.
+    std::set<std::string> fieldDefinitions;
+
 public:
 
     explicit StructData(std::string name, std::string fileName): name(name), fileName(fileName) {};
+
+    // Get the field definitions.
+    std::set<std::string> getFieldDefinitions() { return this->fieldDefinitions; }
+
+    // Method used to set the fielddefinitions.
+    void setFieldDefinitions(std::set<std::string> fieldDefinitions) {
+        this->fieldDefinitions = fieldDefinitions;
+    }
 
     // Obtain the name of this structure.
     std::string getName() { return this->name; }
@@ -54,6 +66,12 @@ public:
 
     // Adding field data.
     void addFieldData(int position, std::string fieldName, std::string fieldType, clang::SourceRange sourceRange);
+
+    // Method used to add a field definition.
+    void addFieldDefinition(std::string definition);
+
+    // Method used to check if this struct has field definitions.
+    bool hasFieldDefinitions();
 };
 
 // Structure reordering semantic modification.
@@ -69,7 +87,7 @@ private:
     // Set containing all structs that have been rewritten already.
     std::set<std::string> rewritten;
 
-    // Set containing all struct names that should be rewritten.
+    // Set containing all struct names that should be rewritten in different versions.
     std::set<std::string> structNeedRewritten;
 
 public:
@@ -100,10 +118,13 @@ public:
     // it when necessary.
     void addStructData(std::string name, StructData* data);
 
+    // Method used to remove a struct from the struct data.
+    void removeStructData(std::string name);
+
     // Method used to add structure reordering data to the structure reordering
     // information map.
     void addStructReorderingData(std::string name, StructData* data);
-    
+
     // Method used to add a structure to the set of rewritten structs.
     void structRewritten(std::string name);
 
@@ -111,7 +132,7 @@ public:
     void addStructNeedRewritten(std::string name);
 
     // Method used to clear the structure reordering information map.
-    void clearNeedsRewritten();
+    void clearStructReorderings();
 
     // Clear the set of structures that have been rewritten already.
     void clearRewritten();
@@ -122,21 +143,10 @@ public:
 class SemanticData {
 private:
 
-    // The path to the main file.
-    std::string mainFilePath;
-
     // Structreordering information.
     StructReordering* structReordering;
 
 public:
-
-    // Get path to the main file.
-    std::string getMainFilePath() { return this->mainFilePath; }
-
-    // Method to set the main file path.
-    void setMainFilePath(std::string mainFilePath) {
-        this->mainFilePath = mainFilePath;
-    }
 
     explicit SemanticData() {
 

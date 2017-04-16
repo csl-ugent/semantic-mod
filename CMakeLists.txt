@@ -2,8 +2,10 @@ set(LLVM_LINK_COMPONENTS support)
 
 add_clang_executable(semantic-mod
   SemanticModification.cpp
-  SemanticAnalyser.h
-  SemanticAnalyser.cpp
+  Semantic.h
+  Semantic.cpp
+  StructReordering.h
+  StructReordering.cpp
   SemanticData.h
   SemanticData.cpp
   SemanticUtil.h
