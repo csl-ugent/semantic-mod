@@ -46,7 +46,7 @@ public:
 
 
 // Semantic post transformation analyser.
-class StructReorderingPreTransformationAnalysis : public clang::RecursiveASTVisitor<StructReorderingAnalyser> {
+class StructReorderingPreTransformationAnalysis : public clang::RecursiveASTVisitor<StructReorderingPreTransformationAnalysis> {
 private:
     clang::ASTContext *astContext; // Used for getting additional AST info.
     SemanticData* semanticData;
@@ -57,8 +57,15 @@ public:
         semanticData(semanticData)
     { }
 
+    // Method used to detect struct types recursively and remove
+    // them from the struct map.
+    void detectStructsRecursively(const clang::Type* type, SemanticData* semanticData);
+
     // We want to investigate top-level things.
     virtual bool VisitTranslationUnitDecl(clang::TranslationUnitDecl* TD);
+
+    // We want to investigate (local) declaration statements.
+    virtual bool VisitDeclStmt(clang::DeclStmt *DeclStmt);
 };
 
 // Semantic Rewriter, will rewrite source code based on the AST.

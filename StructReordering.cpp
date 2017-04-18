@@ -10,7 +10,7 @@ using namespace clang;
 using namespace llvm;
 using namespace clang::tooling;
 
-// Method which applies the structure reordering.
+// Struct which applies the structure reordering.
 typedef struct structOrdering_ {
     std::string name;
     std::vector<int> chosen;
@@ -79,6 +79,9 @@ bool StructReorderingAnalyser::VisitTranslationUnitDecl(clang::TranslationUnitDe
                     continue;
                 }
 
+                // DEBUG
+                llvm::outs() << "Found valid structure: " << structName << "\n";
+
                 // We get the type for this declaration.
                 const Type* type = D->getTypeForDecl();
                 StructData* structData = new StructData(structName, fileNameStr);
@@ -120,9 +123,7 @@ bool StructReorderingAnalyser::VisitTranslationUnitDecl(clang::TranslationUnitDe
     return true;
 }
 
-void detectStructsRecursively(const Type* type, SemanticData* semanticData);
-
-void detectStructsRecursively(const Type* type, SemanticData* semanticData) {
+void StructReorderingPreTransformationAnalysis::detectStructsRecursively(const Type* type, SemanticData* semanticData) {
 
     // We obtain all the struct data from the previous phase.
     StructReordering* structReordering = semanticData->getStructReordering();
@@ -152,7 +153,7 @@ void detectStructsRecursively(const Type* type, SemanticData* semanticData) {
             const Type* subType = (field->getType()).getTypePtrOrNull();
 
             // We handle the field recursively.
-            detectStructsRecursively(subType, semanticData);
+            this->detectStructsRecursively(subType, semanticData);
         }
     } else if (type != NULL && type->isUnionType()) { // Handle unions.
 
@@ -167,7 +168,7 @@ void detectStructsRecursively(const Type* type, SemanticData* semanticData) {
             const Type* subType = (field->getType()).getTypePtrOrNull();
 
             // We handle the field recursively.
-            detectStructsRecursively(subType, semanticData);
+            this->detectStructsRecursively(subType, semanticData);
         }
     } else if (type != NULL && type->isArrayType()) { // Handle arrays.
 
@@ -175,11 +176,11 @@ void detectStructsRecursively(const Type* type, SemanticData* semanticData) {
         const Type* subType = (type->getAsArrayTypeUnsafe()->getElementType()).getTypePtrOrNull();
 
         // We handle the type recursively.
-        detectStructsRecursively(subType, semanticData);
+        this->detectStructsRecursively(subType, semanticData);
     }
 }
 
-// AST visitor, used for performing analysis pre transformation.
+//AST visitor, used for performing analysis pre transformation.
 bool StructReorderingPreTransformationAnalysis::VisitTranslationUnitDecl(clang::TranslationUnitDecl* TD) {
     clang::DeclContext::decl_iterator it;
     for(it = TD->decls_begin(); it != TD->decls_end(); ++it) {
@@ -192,7 +193,50 @@ bool StructReorderingPreTransformationAnalysis::VisitTranslationUnitDecl(clang::
             const Type* type = (D->getType()).getTypePtrOrNull();
 
             // We detect structs recursively and remove them from the struct map.
-            detectStructsRecursively(type, this->semanticData);
+            this->detectStructsRecursively(type, this->semanticData);
+        }
+    }
+    return true;
+}
+
+// AST visitor, used for performing analysis pre transformation.
+bool StructReorderingPreTransformationAnalysis::VisitDeclStmt(clang::DeclStmt *DeclStmt) {
+
+    // Vars used.
+    Decl* decl;
+    clang::DeclStmt::decl_iterator it;
+
+
+    // Iterate over all declarations in this DeclStmt.
+    for(it = DeclStmt->decl_begin(); it != DeclStmt->decl_end(); ++it) {
+
+        // Current declaration.
+        decl = *it;
+
+        // We check if the declaration is a var declaration.
+        if (VarDecl* D = dyn_cast<VarDecl>(decl)) {
+
+            // We obtain the type information.
+            QualType qualType = D->getType();
+            const Type* type = (D->getType()).getTypePtrOrNull();
+
+            // We determine if the base type if static and/or constant.
+            if (qualType.isConstQualified() || D->isStaticLocal()) {
+
+                // We detect structs recursively and remove them from the struct map.
+                detectStructsRecursively(type, this->semanticData);
+            }
+
+            // We check if the variable has an initializer.
+            if (D->hasInit()) {
+
+                // Initializer was actually an InitListExpr.
+                if (InitListExpr* init = dyn_cast<InitListExpr>(D->getInit())) {
+
+                    // We detect structs recursively and remove them from the struct map.
+                    detectStructsRecursively(type, this->semanticData);
+                }
+            }
         }
     }
     return true;
@@ -222,7 +266,7 @@ bool StructReorderingRewriter::VisitTranslationUnitDecl(clang::TranslationUnitDe
                     // We make sure we do not rewrite some structure that has already
                     // been rewritten.
                     if (structReordering->hasBeenRewritten(structName)) {
-                        return true;
+                        continue;
                     }
 
                     // We need to rewrite it.
@@ -435,7 +479,7 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
 
         // We add the name of the struct that needs to be rewritten.
         structData->setFieldDefinitions(chosenStruct->getFieldDefinitions());
-        semanticData->getStructReordering()->addStructNeedRewritten(chosenStruct->getName());
+        //semanticData->getStructReordering()->addStructNeedRewritten(chosenStruct->getName());
 
         // Add the orderingstruct to the list of orderingstructs and
         // increase the amount we have chosen.

@@ -25,7 +25,7 @@
 // Enumeration of types of transformations.
 namespace Transformation {
     enum Type {
-        StructReordering
+        StructReordering, FPReordering, SWCReordering
     };
 }
 

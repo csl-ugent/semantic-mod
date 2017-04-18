@@ -1,5 +1,7 @@
 #include "Semantic.h"
 #include "StructReordering.h"
+#include "SWCReordering.h"
+#include "FPReordering.h"
 
 #include "clang/Lex/Lexer.h"
 
@@ -31,6 +33,10 @@ ASTConsumer* SemanticFrontendAction::CreateASTConsumer(CompilerInstance &CI, Str
     // We create a new AST consumer based on the type of transformation.
     if (this->transType == Transformation::StructReordering) {
         return new StructReorderingASTConsumer(&CI, this->semanticData, this->rewriter, this->baseDirectory, this->phaseType);
+    } else if (this->transType == Transformation::FPReordering) {
+        return new FPReorderingASTConsumer(&CI, this->semanticData, this->rewriter, this->baseDirectory, this->phaseType);
+    } else if (this->transType == Transformation::SWCReordering) {
+        return new SWCReorderingASTConsumer(&CI, this->semanticData, this->rewriter, this->baseDirectory, this->phaseType);
     }
 }
 

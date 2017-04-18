@@ -4,8 +4,12 @@ add_clang_executable(semantic-mod
   SemanticModification.cpp
   Semantic.h
   Semantic.cpp
+  FPReordering.h
+  FPReordering.cpp
   StructReordering.h
   StructReordering.cpp
+  SWCReordering.h
+  SWCReordering.cpp
   SemanticData.h
   SemanticData.cpp
   SemanticUtil.h
