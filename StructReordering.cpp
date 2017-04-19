@@ -38,6 +38,110 @@ bool StructReorderingAnalyser::VisitTranslationUnitDecl(clang::TranslationUnitDe
         // Current delcaration we are considering.
         Decl* decl = *it;
 
+        // We check if we are dealing with a TypeDefDecl.
+        if (TypedefDecl* D = dyn_cast<TypedefDecl>(decl)) {
+
+            // We create new structData information.
+            StringRef fileNameRef = astContext->getSourceManager().getFilename(
+                D->getLocation());
+
+            std::string fileNameStr;
+            if (fileNameRef.data()) {
+                fileNameStr = std::string(fileNameRef.data());
+
+                // We make sure the file is contained in our base directory...
+                if (fileNameStr.find(this->baseDirectory) == std::string::npos) {
+
+                    // Declaration is not contained in a header located in
+                    // the base directory...
+                    continue;
+                }
+            } else {
+
+                // Invalid struct to analyse... (header name cannot be found?)
+                continue;
+            }
+
+            // We obtain the canonical qual type/type.
+            const Type* origType = D->getTypeForDecl();
+
+            if (origType != NULL) {
+                QualType qualTypeCn = origType->getCanonicalTypeInternal();
+                const Type* type = qualTypeCn.getTypePtrOrNull();
+
+                // We make sure the original type was a structure type.
+                if (type != NULL && type->isStructureType()) {
+
+                    // We obtain the record declaration by considering it a struct type.
+                    RecordDecl* recordDecl = type->getAsStructureType()->getDecl();
+
+                    // The name of the structure.
+                    std::string structName = recordDecl->getNameAsString();
+
+                    // Anonymous struct definition.
+                    if (structName == "") {
+
+                        // Check the size (# of fields).
+                        int size = 0;
+                        for(RecordDecl::field_iterator jt = recordDecl->field_begin(); jt != recordDecl->field_end();++jt) { size++; }
+
+                        // We will only consider structs that are worth to be reordened.
+                        if (size > 1) {
+
+                            std::stringstream newName;
+                            newName << "." << D->getNameAsString();
+                            std::string newNameStr = newName.str();
+
+                            // We check if we already found this struct or not.
+                            // If we didn't found this struct before, we add an entry for it.
+                            StructReordering* structReordering = this->semanticData->getStructReordering();
+                            if (structReordering->isInStructMap(newNameStr)) {
+                                continue; // Structure already analysed...
+                            }
+
+                            // DEBUG
+                            llvm::outs() << "Found valid structure: " << newNameStr << "\n";
+
+                            // We create a new struct data object.
+                            StructData* structData = new StructData(newNameStr, fileNameStr);
+
+                            // Analysing the members of the structure.
+                            std::string fieldName;
+                            std::string fieldType;
+                            SourceRange sourceRange;
+                            int position = 0;
+                            for(RecordDecl::field_iterator jt = recordDecl->field_begin(); jt != recordDecl->field_end();++jt)
+                            {
+                                fieldName = jt->getNameAsString();
+                                fieldType = jt->getType().getAsString();
+                                sourceRange = jt->getSourceRange();
+
+                                // We add the field information to the structure information.
+                                structData->addFieldData(position, fieldName, fieldType, sourceRange);
+                                position++;
+                            }
+
+                            // We iterate over possible declarations within the struct.
+                            for (clang::DeclContext::decl_iterator kt = recordDecl->decls_begin(); kt != recordDecl->decls_end(); ++kt) {
+
+                                // Current delcaration we are considering.
+                                Decl* innerDecl = *kt;
+
+                                // We check if the Decl is a RecordDecl.
+                                if (RecordDecl* innerD = dyn_cast<RecordDecl>(innerDecl)) {
+                                    std::string recordText = location2str(innerD->getLocStart(), innerD->getLocEnd(), &astContext->getSourceManager(), &astContext->getLangOpts());
+                                    structData->addFieldDefinition(recordText);
+                                }
+                            }
+
+                            // We add it to the StructData map.
+                            structReordering->addStructData(structData->getName(), structData);
+                        }
+                    }
+                }
+            }
+        }
+
         // We check if the Decl is a RecordDecl.
         if (RecordDecl* D = dyn_cast<RecordDecl>(decl)) {
 
@@ -50,7 +154,7 @@ bool StructReorderingAnalyser::VisitTranslationUnitDecl(clang::TranslationUnitDe
                 // We check if we already found this struct or not.
                 // If we didn't found this struct before, we add an entry for it.
                 StructReordering* structReordering = this->semanticData->getStructReordering();
-                if (structReordering->isInStructMap(structName)) {
+                if (structReordering->isInStructMap(structName) || structName == "") {
                     continue; // Structure already analysed...
                 } else {
                     // Some debug information.
@@ -79,54 +183,66 @@ bool StructReorderingAnalyser::VisitTranslationUnitDecl(clang::TranslationUnitDe
                     continue;
                 }
 
-                // DEBUG
-                llvm::outs() << "Found valid structure: " << structName << "\n";
+                // Check the size (# of fields).
+                int size = 0;
+                for(RecordDecl::field_iterator jt = D->field_begin(); jt != D->field_end();++jt) { size++; }
 
-                // We get the type for this declaration.
-                const Type* type = D->getTypeForDecl();
-                StructData* structData = new StructData(structName, fileNameStr);
+                // We will only consider structs that are worth to be reordened.
+                if (size > 1) {
 
-                // Analysing the members of the structure.
-                std::string fieldName;
-                std::string fieldType;
-                SourceRange sourceRange;
-                int position = 0;
-                for(RecordDecl::field_iterator jt = D->field_begin(); jt != D->field_end();++jt)
-                {
-                    fieldName = jt->getNameAsString();
-                    fieldType = jt->getType().getAsString();
-                    sourceRange = jt->getSourceRange();
+                    // DEBUG
+                    llvm::outs() << "Found valid structure: " << structName << "\n";
 
-                    // We add the field information to the structure information.
-                    structData->addFieldData(position, fieldName, fieldType, sourceRange);
-                    position++;
-                }
+                    // We get the type for this declaration.
+                    const Type* type = D->getTypeForDecl();
+                    StructData* structData = new StructData(structName, fileNameStr);
 
-                // We iterate over possible declarations within the struct.
-                for (clang::DeclContext::decl_iterator kt = D->decls_begin(); kt != TD->decls_end(); ++kt) {
+                    // Analysing the members of the structure.
+                    std::string fieldName;
+                    std::string fieldType;
+                    SourceRange sourceRange;
+                    int position = 0;
+                    for(RecordDecl::field_iterator jt = D->field_begin(); jt != D->field_end();++jt)
+                    {
+                        fieldName = jt->getNameAsString();
+                        fieldType = jt->getType().getAsString();
+                        sourceRange = jt->getSourceRange();
 
-                    // Current delcaration we are considering.
-                    Decl* innerDecl = *kt;
-
-                    // We check if the Decl is a RecordDecl.
-                    if (RecordDecl* innerD = dyn_cast<RecordDecl>(innerDecl)) {
-                        std::string recordText = location2str(innerD->getLocStart(), innerD->getLocEnd(), &astContext->getSourceManager(), &astContext->getLangOpts());
-                        structData->addFieldDefinition(recordText);
+                        // We add the field information to the structure information.
+                        structData->addFieldData(position, fieldName, fieldType, sourceRange);
+                        position++;
                     }
-                }
 
-                // We add it to the StructData map.
-                structReordering->addStructData(structData->getName(), structData);
+                    // We iterate over possible declarations within the struct.
+                    for (clang::DeclContext::decl_iterator kt = D->decls_begin(); kt != TD->decls_end(); ++kt) {
+
+                        // Current delcaration we are considering.
+                        Decl* innerDecl = *kt;
+
+                        // We check if the Decl is a RecordDecl.
+                        if (RecordDecl* innerD = dyn_cast<RecordDecl>(innerDecl)) {
+                            std::string recordText = location2str(innerD->getLocStart(), innerD->getLocEnd(), &astContext->getSourceManager(), &astContext->getLangOpts());
+                            structData->addFieldDefinition(recordText);
+                        }
+                    }
+
+                    // We add it to the StructData map.
+                    structReordering->addStructData(structData->getName(), structData);
+                }
             }
         }
     }
     return true;
 }
 
-void StructReorderingPreTransformationAnalysis::detectStructsRecursively(const Type* type, SemanticData* semanticData) {
+void StructReorderingPreTransformationAnalysis::detectStructsRecursively(const Type* origType, SemanticData* semanticData) {
 
     // We obtain all the struct data from the previous phase.
     StructReordering* structReordering = semanticData->getStructReordering();
+
+    // We obtain the canonical qual type/type.
+    QualType qualTypeCn = origType->getCanonicalTypeInternal();
+    const Type* type = qualTypeCn.getTypePtrOrNull();
 
     // We check if the original declaration is a struct type.
     if (type != NULL && type->isStructureType()) {
@@ -136,6 +252,21 @@ void StructReorderingPreTransformationAnalysis::detectStructsRecursively(const T
 
         // The name of the structure.
         std::string structName = recordDecl->getNameAsString();
+
+        // Anonymous struct definition.
+        if (structName == "") {
+            const TypedefType* typedefType = dyn_cast<TypedefType>(origType);
+            if (typedefType) {
+
+                // We obtain the corresponding declaration.
+                TypedefNameDecl* typedefNameDecl = typedefType->getDecl();
+                std::stringstream newName;
+                newName << "." << typedefNameDecl->getNameAsString();
+
+                // We update the struct name.
+                structName = newName.str();
+            }
+        }
 
         // We check if the struct is in the struct map.
         if (structReordering->isInStructMap(structName)) {
@@ -250,6 +381,106 @@ bool StructReorderingRewriter::VisitTranslationUnitDecl(clang::TranslationUnitDe
         // Current delcaration we are considering.
         Decl* decl = *it;
 
+        // We check if we are dealing with a TypeDefDecl.
+        if (TypedefDecl* D = dyn_cast<TypedefDecl>(decl)) {
+
+            // We obtain the canonical qual type/type.
+            const Type* origType = D->getTypeForDecl();
+
+            if (origType != NULL) {
+                QualType qualTypeCn = origType->getCanonicalTypeInternal();
+                const Type* type = qualTypeCn.getTypePtrOrNull();
+
+                // We make sure the original type was a structure type.
+                if (type != NULL && type->isStructureType()) {
+
+                    // We obtain the record declaration by considering it a struct type.
+                    RecordDecl* recordDecl = type->getAsStructureType()->getDecl();
+
+                    // The name of the structure.
+                    std::string structName = recordDecl->getNameAsString();
+
+                    // Anonymous struct definition.
+                    if (structName == "") {
+
+                        // We create the corresponding real name.
+                        std::stringstream newName;
+                        newName << "." << D->getNameAsString();
+                        std::string newNameStr = newName.str();
+
+                        // We might need to rewrite this.
+                        StructReordering* structReordering = this->semanticData->getStructReordering();
+                        if (structReordering->isInStructReorderingMap(newNameStr)) {
+
+                            // We make sure we do not rewrite some structure that has already
+                            // been rewritten.
+                            if (structReordering->hasBeenRewritten(newNameStr)) {
+                                continue;
+                            }
+
+                            // We need to rewrite it.
+                            StructData* structData = structReordering->getStructReorderings()[newNameStr];
+
+                            // We obtain the fields data of the structure.
+                            std::vector<FieldData> fieldData = structData->getFieldData();
+
+                            {
+                                // FieldData iterator.
+                                std::vector<FieldData>::iterator it;
+                                SourceRange lowerBound = fieldData[0].sourceRange;
+                                SourceRange upperBound = fieldData[0].sourceRange;
+                                std::stringstream replacement;
+                                FieldData substitute;
+
+                                // Iterate over all reordered elements.
+                                for (int i = 0; i < fieldData.size(); i++) {
+
+                                    // We get the substitute field.
+                                    substitute = fieldData[i];
+
+                                    // We update the replacement string.
+                                    std::string fieldText = location2str(substitute.sourceRange.getBegin(), substitute.sourceRange.getEnd(), &astContext->getSourceManager(), &astContext->getLangOpts());
+                                    replacement << fieldText;
+                                    if (i != fieldData.size() - 1) {
+                                        replacement << ";";
+                                    }
+
+                                    // We check upper/lowerbounds on declarations.
+                                    if (astContext->getSourceManager().getFileLoc(lowerBound.getBegin()).getRawEncoding() > astContext->getSourceManager().getFileLoc(substitute.sourceRange.getBegin()).getRawEncoding()) {
+                                        lowerBound = substitute.sourceRange;
+                                    }
+
+                                    if (astContext->getSourceManager().getFileLoc(upperBound.getEnd()).getRawEncoding() < astContext->getSourceManager().getFileLoc(substitute.sourceRange.getEnd()).getRawEncoding()) {
+                                        upperBound = substitute.sourceRange;
+                                    }
+                                }
+
+                                // We replace the declarations with a new declaration string.
+                                this->rewriter->ReplaceText(SourceRange(lowerBound.getBegin(), upperBound.getEnd()), replacement.str());
+
+
+                                // We add possible field definitions to the struct.
+                                if (structData->hasFieldDefinitions()) {
+
+                                    std::set<std::string> definitions = structData->getFieldDefinitions();
+                                    std::set<std::string>::reverse_iterator it;
+                                    FieldDecl* firstField = *(recordDecl->field_begin());
+                                    for (it = definitions.rbegin(); it != definitions.rend(); ++it) {
+                                        std::string definition = *it;
+                                        this->rewriter->InsertTextBefore(firstField->getLocStart(),
+                                                                         definition + ";");
+                                    }
+                                }
+                            }
+
+                            // We add this structure to the set of rewritten structures.
+                            structReordering->structRewritten(newNameStr);
+                        }
+                    }
+                }
+            }
+        }
+
         // We check if the Decl is a RecordDecl.
         if (RecordDecl* D = dyn_cast<RecordDecl>(decl)) {
 
@@ -280,7 +511,7 @@ bool StructReorderingRewriter::VisitTranslationUnitDecl(clang::TranslationUnitDe
                         // FieldData iterator.
                         std::vector<FieldData>::iterator it;
                         SourceRange lowerBound = fieldData[0].sourceRange;
-                        SourceRange upperBound = fieldData[0].sourceRange;;
+                        SourceRange upperBound = fieldData[0].sourceRange;
                         std::stringstream replacement;
                         FieldData substitute;
 
@@ -291,17 +522,18 @@ bool StructReorderingRewriter::VisitTranslationUnitDecl(clang::TranslationUnitDe
                             substitute = fieldData[i];
 
                             // We update the replacement string.
-                            replacement << substitute.fieldType + " " + substitute.fieldName;
+                            std::string fieldText = location2str(substitute.sourceRange.getBegin(), substitute.sourceRange.getEnd(), &astContext->getSourceManager(), &astContext->getLangOpts());
+                            replacement << fieldText;
                             if (i != fieldData.size() - 1) {
                                 replacement << ";";
                             }
 
                             // We check upper/lowerbounds on declarations.
-                            if (lowerBound.getBegin().getRawEncoding() > substitute.sourceRange.getBegin().getRawEncoding()) {
+                            if (astContext->getSourceManager().getFileLoc(lowerBound.getBegin()).getRawEncoding() > astContext->getSourceManager().getFileLoc(substitute.sourceRange.getBegin()).getRawEncoding()) {
                                 lowerBound = substitute.sourceRange;
                             }
 
-                            if (upperBound.getEnd().getRawEncoding() < substitute.sourceRange.getEnd().getRawEncoding()) {
+                            if (astContext->getSourceManager().getFileLoc(upperBound.getEnd()).getRawEncoding() < astContext->getSourceManager().getFileLoc(substitute.sourceRange.getEnd()).getRawEncoding()) {
                                 upperBound = substitute.sourceRange;
                             }
                         }
