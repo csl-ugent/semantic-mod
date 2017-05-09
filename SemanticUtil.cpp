@@ -4,6 +4,13 @@
 #include <sstream>
 #include <fstream>
 #include <string>
+#include <math.h>
+
+#include "clang/Rewrite/Core/Rewriter.h"
+#include "clang/Rewrite/Frontend/Rewriters.h"
+#include "clang/Tooling/Tooling.h"
+
+using namespace llvm;
 
 int random_0_to_n(int n) {
 
@@ -19,12 +26,21 @@ int factorial(int n)
   return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
 }
 
+double entropyEquiprobable(int m) {
+    return log2(m);
+}
+
 void writeJSONToFile(std::string outputPath, int version, std::string fileName, Json::Value output) {
 
     // We construct the full output directory.
-    std::stringstream s;
-    s << outputPath << "v" << version;
-    std::string fullPath = s.str();
+    std::string fullPath;
+    if (version != -1) {
+        std::stringstream s;
+        s << outputPath << "v" << version;
+        fullPath = s.str();
+    } else {
+        fullPath = outputPath;
+    }
 
     // We check if this directory exists, if it doesn't we will create it.
     const int dir_err = system(("mkdir -p " + fullPath).c_str());
@@ -34,6 +50,8 @@ void writeJSONToFile(std::string outputPath, int version, std::string fileName, 
 
     // Write changes to the file.
     std::string outputPathFull = fullPath + "/" + fileName;
+
+    llvm::outs() << "Output path: " << outputPathFull << "\n";
 
     // We open the file.
     outputFile.open(outputPathFull.c_str());

@@ -230,6 +230,9 @@ void fpreordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Too
     // We run the analysis phase.
     Tool->run(new SemanticFrontendActionFactory(semanticData, rewriter, baseDirectory, Transformation::FPReordering, Phase::Analysis));
 
+    // More analytics written to output.
+    Json::Value analytics;
+
     // We determine the functions that will be reordered.
     int amount = amountOfReorderings;
     int amountChosen = 0;
@@ -238,11 +241,15 @@ void fpreordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Too
     std::map<std::string, FunctionData*> functionMap = semanticData->getFPReordering()->getFunctionMap();
     std::string outputPrefix = outputDirectory + "/function_r_";
 
+    // Add some analytics information.
+    analytics["amount_of_functions"] = functionMap.size();
+
     // We need to determine the maximum amount of reorderings that is actually
     // possible with the given input source files (based on the analysis phase).
     {
         FunctionData* current;
         int totalReorderings = 0;
+        double averageParameters = 0;
         for (it = functionMap.begin(); it != functionMap.end(); ++it) {
 
             // We set the current FunctionData we are iterating over.
@@ -251,7 +258,13 @@ void fpreordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Too
             // We increase the total possible reorderings, based on
             // the factorial of the number of fields.
             totalReorderings += factorial(current->getFieldDataSize());
+            averageParameters += current->getFieldDataSize();
         }
+
+        // Add some analytics information.
+        analytics["avg_function_parameters"] = averageParameters / functionMap.size();
+        analytics["total_reorderings"] = totalReorderings;
+        analytics["entropy"] = entropyEquiprobable(totalReorderings);
 
         // Debug.
         llvm::outs() << "Total reorderings possible with " << functionMap.size() << " functions is: " << totalReorderings << "\n";
@@ -262,6 +275,12 @@ void fpreordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Too
         }
     }
 
+    // Debug.
+    llvm::outs() << "Writing analytics output...\n";
+
+    // Write some debug analytics to output.
+    writeJSONToFile(outputDirectory, -1, "analytics.json", analytics);
+    
     // Debug.
     llvm::outs() << "Amount of reorderings is set to: " << amount << "\n";
 

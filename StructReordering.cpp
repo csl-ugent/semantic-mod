@@ -580,6 +580,9 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
     // We run the analysis phase.
     Tool->run(new SemanticFrontendActionFactory(semanticData, rewriter, baseDirectory, Transformation::StructReordering, Phase::PreTransformationAnalysis));
 
+    // More analytics written to output.
+    Json::Value analytics;
+
     // We determine the structs that will be reordered.
     int amount = amountOfReorderings;
     int amountChosen = 0;
@@ -588,11 +591,15 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
     std::map<std::string, StructData*> structMap = semanticData->getStructReordering()->getStructMap();
     std::string outputPrefix = outputDirectory + "/struct_r_";
 
+    // Add some analytics information.
+    analytics["amount_of_structs"] = structMap.size();
+
     // We need to determine the maximum amount of reorderings that is actually
     // possible with the given input source files (based on the analysis phase).
     {
         StructData* current;
         int totalReorderings = 0;
+        double averageStructSize = 0;
         for (it = structMap.begin(); it != structMap.end(); ++it) {
             // We set the current StructData we are iterating over.
             current = it->second;
@@ -600,7 +607,13 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
             // We increase the total possible reorderings, based on
             // the factorial of the number of fields.
             totalReorderings += factorial(current->getFieldDataSize());
+            averageStructSize += current->getFieldDataSize();
         }
+
+        // Add some analytics information.
+        analytics["avg_struct_size"] = averageStructSize / structMap.size();
+        analytics["total_reorderings"] = totalReorderings;
+        analytics["entropy"] = entropyEquiprobable(totalReorderings);
 
         // Debug.
         llvm::outs() << "Total reorderings possible with " << structMap.size() << " structs is: " << totalReorderings << "\n";
@@ -610,6 +623,12 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
             amount = totalReorderings;
         }
     }
+
+    // Debug.
+    llvm::outs() << "Writing analytics output...\n";
+
+    // Write some debug analytics to output.
+    writeJSONToFile(outputDirectory, -1, "analytics.json", analytics);
 
     // Debug.
     llvm::outs() << "Amount of reorderings is set to: " << amount << "\n";
