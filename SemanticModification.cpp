@@ -78,6 +78,9 @@ static cl::opt<std::string> TransformationType("transtype");
 // Entry point of our tool.
 int main(int argc, const char **argv) {
 
+    // Initialize random seed.
+    init_random();
+
     // Default options parser.
     CommonOptionsParser OptionsParser(argc, argv);
 

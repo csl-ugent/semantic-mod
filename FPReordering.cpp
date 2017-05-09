@@ -1,6 +1,8 @@
 #include "FPReordering.h"
 #include "json.h"
 #include "SemanticUtil.h"
+#include <sstream>
+#include <string>
 
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/Rewriters.h"
@@ -242,6 +244,8 @@ void fpreordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Too
     std::string outputPrefix = outputDirectory + "/function_r_";
 
     // Add some analytics information.
+    std::map<int, int> histogram;
+
     analytics["amount_of_functions"] = functionMap.size();
 
     // We need to determine the maximum amount of reorderings that is actually
@@ -259,6 +263,23 @@ void fpreordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Too
             // the factorial of the number of fields.
             totalReorderings += factorial(current->getFieldDataSize());
             averageParameters += current->getFieldDataSize();
+
+            // Look if this amount has already occured or not.
+            if (histogram.find(current->getFieldDataSize()) != histogram.end()) {
+                histogram[current->getFieldDataSize()]++;
+            } else {
+                histogram[current->getFieldDataSize()] = 1;
+            }
+        }
+
+        {
+            // Add function parameter histogram.
+            std::map<int, int>::iterator it;
+            for (it = histogram.begin(); it != histogram.end(); ++it) {
+                std::stringstream ss;
+                ss << it->first;
+                analytics["function_parameters"][ss.str()] = it->second;
+            }
         }
 
         // Add some analytics information.
@@ -280,7 +301,7 @@ void fpreordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Too
 
     // Write some debug analytics to output.
     writeJSONToFile(outputDirectory, -1, "analytics.json", analytics);
-    
+
     // Debug.
     llvm::outs() << "Amount of reorderings is set to: " << amount << "\n";
 
