@@ -24,12 +24,12 @@ int random_0_to_n(int n) {
     return rand() % n;
 }
 
-int factorial(int n)
+unsigned long factorial(unsigned long n)
 {
   return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
 }
 
-double entropyEquiprobable(int m) {
+double entropyEquiprobable(long m) {
     return log2(m);
 }
 

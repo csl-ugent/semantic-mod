@@ -236,8 +236,8 @@ void fpreordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Too
     Json::Value analytics;
 
     // We determine the functions that will be reordered.
-    int amount = amountOfReorderings;
-    int amountChosen = 0;
+    unsigned long amount = amountOfReorderings;
+    unsigned long amountChosen = 0;
     std::vector<FunctionOrdering> chosen;
     std::map<std::string, FunctionData*>::iterator it;
     std::map<std::string, FunctionData*> functionMap = semanticData->getFPReordering()->getFunctionMap();
@@ -252,7 +252,7 @@ void fpreordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Too
     // possible with the given input source files (based on the analysis phase).
     {
         FunctionData* current;
-        int totalReorderings = 0;
+        long totalReorderings = 0;
         double averageParameters = 0;
         for (it = functionMap.begin(); it != functionMap.end(); ++it) {
 
@@ -284,16 +284,10 @@ void fpreordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Too
 
         // Add some analytics information.
         analytics["avg_function_parameters"] = averageParameters / functionMap.size();
-        analytics["total_reorderings"] = totalReorderings;
         analytics["entropy"] = entropyEquiprobable(totalReorderings);
 
         // Debug.
         llvm::outs() << "Total reorderings possible with " << functionMap.size() << " functions is: " << totalReorderings << "\n";
-
-        // We might need to cap the total possible reorderings.
-        if (amount > totalReorderings) {
-            amount = totalReorderings;
-        }
     }
 
     // Debug.

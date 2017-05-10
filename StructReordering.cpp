@@ -568,11 +568,16 @@ bool StructReorderingRewriter::VisitTranslationUnitDecl(clang::TranslationUnitDe
 // Method used for the structreordering semantic transformation.
 void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings) {
 
+    // More analytics written to output.
+    Json::Value analytics;
+
     // Debug information.
     llvm::outs() << "Phase 1: Struct analysis\n";
 
     // We run the analysis phase.
     Tool->run(new SemanticFrontendActionFactory(semanticData, rewriter, baseDirectory, Transformation::StructReordering, Phase::Analysis));
+
+    analytics["total_amount_of_structs"] = semanticData->getStructReordering()->getStructMap().size();
 
     // Debug information.
     llvm::outs() << "Phase 2: Struct pre-transformation analysis\n";
@@ -580,12 +585,9 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
     // We run the analysis phase.
     Tool->run(new SemanticFrontendActionFactory(semanticData, rewriter, baseDirectory, Transformation::StructReordering, Phase::PreTransformationAnalysis));
 
-    // More analytics written to output.
-    Json::Value analytics;
-
     // We determine the structs that will be reordered.
-    int amount = amountOfReorderings;
-    int amountChosen = 0;
+    unsigned long amount = amountOfReorderings;
+    unsigned long amountChosen = 0;
     std::vector<StructOrdering> chosen;
     std::map<std::string, StructData*>::iterator it;
     std::map<std::string, StructData*> structMap = semanticData->getStructReordering()->getStructMap();
@@ -598,30 +600,27 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
     // possible with the given input source files (based on the analysis phase).
     {
         StructData* current;
-        int totalReorderings = 0;
+        unsigned long totalReorderings = 0;
         double averageStructSize = 0;
+        Json::Value vec(Json::arrayValue);
+
         for (it = structMap.begin(); it != structMap.end(); ++it) {
             // We set the current StructData we are iterating over.
             current = it->second;
+            Json::Value field;
 
-            // We increase the total possible reorderings, based on
-            // the factorial of the number of fields.
-            totalReorderings += factorial(current->getFieldDataSize());
+            field["size"] = current->getFieldDataSize();
+
             averageStructSize += current->getFieldDataSize();
+            vec.append(field);
         }
 
         // Add some analytics information.
         analytics["avg_struct_size"] = averageStructSize / structMap.size();
-        analytics["total_reorderings"] = totalReorderings;
-        analytics["entropy"] = entropyEquiprobable(totalReorderings);
+        analytics["struct_fields"] = vec;
 
         // Debug.
-        llvm::outs() << "Total reorderings possible with " << structMap.size() << " structs is: " << totalReorderings << "\n";
-
-        // We might need to cap the total possible reorderings.
-        if (amount > totalReorderings) {
-            amount = totalReorderings;
-        }
+        llvm::outs() << "Total reorderings possible with " << structMap.size() << " structs.\n";
     }
 
     // Debug.
