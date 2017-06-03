@@ -15,7 +15,7 @@ using namespace llvm;
 
 void init_random() {
     /* initialize random seed */
-    srand(42);
+    srand(time(NULL));
 }
 
 int random_0_to_n(int n) {
