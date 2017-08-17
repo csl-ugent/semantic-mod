@@ -24,3 +24,5 @@ target_link_libraries(semantic-mod
   clangBasic
   clangASTMatchers
   )
+
+install(TARGETS semantic-mod RUNTIME DESTINATION bin)
