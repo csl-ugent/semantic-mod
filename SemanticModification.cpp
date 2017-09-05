@@ -70,9 +70,7 @@ static cl::extrahelp MoreHelp("\nMore help text...\n");
 // Extra output option.
 static cl::opt<std::string> OutputDirectory("od");
 static cl::opt<std::string> BaseDirectory("bd");
-static cl::opt<int> AmountOfStructReorderings("sr_am");
-static cl::opt<int> AmountOfFPReorderings("fp_am");
-static cl::opt<int> AmountOfSWCReorderings("swc_am");
+static cl::opt<unsigned> NumberOfVersions("nr_of_versions");
 static cl::opt<std::string> TransformationType("transtype");
 
 // Entry point of our tool.
@@ -108,16 +106,16 @@ int main(int argc, const char **argv) {
     if (TransformationType == "StructReordering") {
 
         // We start the structreordering transformation.
-        structReordering(semanticData, rewriter, &Tool, BaseDirectory, OutputDirectory, AmountOfStructReorderings);
+        structReordering(semanticData, rewriter, &Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
 
     } else if (TransformationType == "FPReordering") {
 
         // We start the function parameter reordering transformation.
-        fpreordering(semanticData, rewriter, &Tool, BaseDirectory, OutputDirectory, AmountOfFPReorderings);
+        fpreordering(semanticData, rewriter, &Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
     } else if (TransformationType == "SWCReordering") {
 
         // We start the switch case reordering transformation.
-        swcreordering(semanticData, rewriter, &Tool, BaseDirectory, OutputDirectory, AmountOfSWCReorderings);
+        swcreordering(semanticData, rewriter, &Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
     }
 
     // Free used memory.
