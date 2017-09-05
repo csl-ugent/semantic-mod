@@ -72,12 +72,10 @@ static cl::opt<std::string> OutputDirectory("od");
 static cl::opt<std::string> BaseDirectory("bd");
 static cl::opt<unsigned> NumberOfVersions("nr_of_versions");
 static cl::opt<std::string> TransformationType("transtype");
+static cl::opt<unsigned> Seed("seed", cl::init((unsigned)0), cl::desc("The seed for the PRNG."));
 
 // Entry point of our tool.
 int main(int argc, const char **argv) {
-
-    // Initialize random seed.
-    init_random();
 
     // Default options parser.
     CommonOptionsParser OptionsParser(argc, argv);
@@ -89,6 +87,9 @@ int main(int argc, const char **argv) {
     // If the OutputDirectory path doesn't have a trailing slash, add one
     if (*OutputDirectory.rbegin() != '/')
       OutputDirectory.append("/");
+
+    // Initialize random seed.
+    init_random(Seed);
 
     // Retrieve source path list from options parser.
     const std::vector<std::string> srcPathList = OptionsParser.getSourcePathList();

@@ -4,7 +4,7 @@
 #include "json.h"
 
 // Method used to initialize the random seed.
-void init_random();
+void init_random(unsigned seed);
 
 // Method used to choose a number between 0 and n - 1 ([0, n-1]).
 int random_0_to_n(int n);

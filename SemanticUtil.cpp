@@ -1,6 +1,5 @@
 #include "SemanticUtil.h"
 #include <stdlib.h> // rand
-#include <time.h> // time
 #include <sstream>
 #include <fstream>
 #include <string>
@@ -13,9 +12,9 @@
 using namespace llvm;
 
 
-void init_random() {
+void init_random(unsigned seed) {
     /* initialize random seed */
-    srand(time(NULL));
+    srand(seed);
 }
 
 int random_0_to_n(int n) {
