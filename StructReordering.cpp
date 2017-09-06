@@ -591,7 +591,7 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
     std::vector<StructOrdering> chosen;
     std::map<std::string, StructData*>::iterator it;
     std::map<std::string, StructData*> structMap = semanticData->getStructReordering()->getStructMap();
-    std::string outputPrefix = outputDirectory + "/struct_r_";
+    std::string outputPrefix = outputDirectory + "struct_r_";
 
     // Add some analytics information.
     analytics["amount_of_structs"] = structMap.size();

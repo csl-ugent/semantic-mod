@@ -84,6 +84,14 @@ int main(int argc, const char **argv) {
     // Default options parser.
     CommonOptionsParser OptionsParser(argc, argv);
 
+    // If the BaseDirectory path doesn't have a trailing slash, add one
+    if (*BaseDirectory.rbegin() != '/')
+      BaseDirectory.append("/");
+
+    // If the OutputDirectory path doesn't have a trailing slash, add one
+    if (*OutputDirectory.rbegin() != '/')
+      OutputDirectory.append("/");
+
     // Retrieve source path list from options parser.
     const std::vector<std::string> srcPathList = OptionsParser.getSourcePathList();
 

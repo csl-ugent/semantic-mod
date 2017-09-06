@@ -241,7 +241,7 @@ void fpreordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Too
     std::vector<FunctionOrdering> chosen;
     std::map<std::string, FunctionData*>::iterator it;
     std::map<std::string, FunctionData*> functionMap = semanticData->getFPReordering()->getFunctionMap();
-    std::string outputPrefix = outputDirectory + "/function_r_";
+    std::string outputPrefix = outputDirectory + "function_r_";
 
     // Add some analytics information.
     std::map<int, int> histogram;

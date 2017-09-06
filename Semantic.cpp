@@ -83,7 +83,7 @@ void SemanticFrontendAction::writeChangesToOutput() {
         StringRef fileNameRef = rewriter->getSourceMgr().getFileEntryForID(I->first)->getName();
         std::string fileNameStr = std::string(fileNameRef.data());
         llvm::outs() << "Obtained filename: " << fileNameStr << "\n";
-        std::string fileName = fileNameStr.substr(fileNameStr.find(baseDirectory) + baseDirectory.length() + 1); /* until the end automatically... */
+        std::string fileName = fileNameStr.substr(fileNameStr.find(baseDirectory) + baseDirectory.length()); /* until the end automatically... */
 
         // Optionally create required subdirectories.
         {
