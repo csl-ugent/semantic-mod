@@ -10,14 +10,10 @@ using namespace llvm;
 
 // Obtain source information corresponding to a statement.
 std::string location2str(SourceLocation begin, SourceLocation end, SourceManager* sm, const LangOptions* lopt) {
-    SourceLocation b(begin), _e(end);
-    if (b.isMacroID())
-        b = sm->getSpellingLoc(b);
-    if (_e.isMacroID())
-        _e = sm->getSpellingLoc(_e);
-    clang::SourceLocation e(clang::Lexer::getLocForEndOfToken(_e, 0, *sm, *lopt));
-    return std::string(sm->getCharacterData(b),
-        sm->getCharacterData(e)-sm->getCharacterData(b));
+    end = clang::Lexer::getLocForEndOfToken(end, 0, *sm, *lopt);
+    const char* Start = sm->getCharacterData(begin);
+    const char* End = sm->getCharacterData(end);
+    return std::string(Start, End - Start);
 }
 
 // Function used to create the semantic analyser frontend action.
