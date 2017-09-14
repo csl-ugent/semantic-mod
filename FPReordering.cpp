@@ -44,8 +44,9 @@ bool FPReorderingAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
         // Function parameter reordering information.
         FPReordering* fpReordering = this->semanticData->getFPReordering();
 
-        // We check if we already identified the function or not.
-        if (FD->param_size() > 1 && !fpReordering->isInFunctionMap(functionName)) {
+        // We check if the function is eligible (enough parameters, not main) and whether we already identified the function or not.
+        // TODO: This should actually check for exported functions, not just main.
+        if (!FD->isMain() && FD->param_size() > 1 && !fpReordering->isInFunctionMap(functionName)) {
 
             // We create new functionData information.
             StringRef fileNameRef = astContext->getSourceManager().getFilename(
