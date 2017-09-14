@@ -119,36 +119,24 @@ bool FPReorderingRewriter::VisitCallExpr(clang::CallExpr* CE) {
             // DEBUG.
             llvm::outs() << "Call to function: " << functionName << " has to be rewritten!\n";
 
-            std::vector<std::string> args;
-            std::string arg;
-            clang::CallExpr::arg_iterator it;
-            for (it = CE->arg_begin(); it != CE->arg_end(); ++it) {
-                Stmt* stmt = *it;
-                arg = location2str(stmt->getSourceRange().getBegin(), stmt->getSourceRange().getEnd(), &astContext->getSourceManager(), &astContext->getLangOpts());
-                args.push_back(arg);
+            // Gather all the arguments
+            std::vector<Stmt*> args;
+            for (auto it = CE->arg_begin(); it != CE->arg_end(); ++it) {
+                args.push_back(*it);
             }
 
-            // We need to rewrite it.
+            // Get the reordering
             FunctionData* functionData = fpReordering->getFunctionReorderings()[functionName];
-
-            // We obtain the fields data of the function.
             std::vector<FieldData> fieldData = functionData->getFieldData();
 
+            unsigned iii = 0;
+            for (auto arg : args)
             {
-                FieldData substitute;
-                int i = 0;
-                for (it = CE->arg_begin(); it != CE->arg_end(); ++it) {
+                // Get the substitute for this argument
+                FieldData substitute = fieldData[iii++];
 
-                    // The original statement.
-                    Stmt* stmt = *it;
-
-                    // We get the substitute field.
-                    substitute = fieldData[i];
-
-                    // We replace the field arg with another argument based on the reordering information.
-                    this->rewriter->ReplaceText(stmt->getSourceRange(), args[substitute.position]);
-                    i++;
-                }
+                // We replace the field arg with another argument based on the reordering information.
+                this->rewriter->ReplaceStmt(arg, args[substitute.position]);
             }
         }
     }
