@@ -1,4 +1,5 @@
 set(LLVM_LINK_COMPONENTS support)
+set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 
 add_clang_executable(semantic-mod
   SemanticModification.cpp
