@@ -97,26 +97,23 @@ int main(int argc, const char **argv) {
     ClangTool Tool(OptionsParser.getCompilations(), srcPathList);
 
     // The rewriter that will be used for source-to-source transformations.
-    Rewriter* rewriter = new Rewriter();
+    Rewriter rewriter;
 
     // We determine what kind of transformation to apply.
     if (TransformationType == "StructReordering") {
 
         // We start the structreordering transformation.
-        structReordering(rewriter, &Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
+        structReordering(&rewriter, &Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
 
     } else if (TransformationType == "FPReordering") {
 
         // We start the function parameter reordering transformation.
-        fpreordering(rewriter, &Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
+        fpreordering(&rewriter, &Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
     } else if (TransformationType == "SWCReordering") {
 
         // We start the switch case reordering transformation.
-        swcreordering(rewriter, &Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
+        swcreordering(&rewriter, &Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
     }
-
-    // Free used memory.
-    delete rewriter;
 
     // Succes.
     return EXIT_SUCCESS;
