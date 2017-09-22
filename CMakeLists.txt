@@ -26,4 +26,7 @@ target_link_libraries(semantic-mod
   clangASTMatchers
   )
 
+# Generate a compilation database
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 install(TARGETS semantic-mod RUNTIME DESTINATION bin)

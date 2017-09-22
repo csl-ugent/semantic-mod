@@ -116,28 +116,20 @@ bool FPReorderingRewriter::VisitCallExpr(clang::CallExpr* CE) {
 
         // We check if this function is eligible for reordering.
         if (fpReordering->isInFunctionReorderingMap(functionName)) {
-
             // DEBUG.
             llvm::outs() << "Call to function: " << functionName << " has to be rewritten!\n";
-
-            // Gather all the arguments
-            std::vector<Stmt*> args;
-            for (auto it = CE->arg_begin(); it != CE->arg_end(); ++it) {
-                args.push_back(*it);
-            }
 
             // Get the reordering
             FunctionData* functionData = fpReordering->getFunctionReorderings()[functionName];
             std::vector<FieldData> fieldData = functionData->getFieldData();
 
-            unsigned iii = 0;
-            for (auto arg : args)
+            for (unsigned iii = 0; iii < CE->getNumArgs(); iii++)
             {
                 // Get the substitute for this argument
-                FieldData substitute = fieldData[iii++];
+                FieldData substitute = fieldData[iii];
 
                 // We replace the field arg with another argument based on the reordering information.
-                this->rewriter->ReplaceStmt(arg, args[substitute.position]);
+                this->rewriter->ReplaceStmt(CE->getArg(iii), CE->getArg(substitute.position));
             }
         }
     }
