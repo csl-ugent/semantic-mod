@@ -41,12 +41,9 @@ bool FPReorderingAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
         // We obtain the function name.
         std::string functionName = FDDef->getNameAsString();
 
-        // Function parameter reordering information.
-        FPReordering* fpReordering = this->semanticData->getFPReordering();
-
         // We check if the function is eligible (enough parameters, not main) and whether we already identified the function or not.
         // TODO: This should actually check for exported functions, not just main.
-        if (!FD->isMain() && FD->param_size() > 1 && !fpReordering->isInFunctionMap(functionName)) {
+        if (!FD->isMain() && FD->param_size() > 1 && !reordering.isInFunctionMap(functionName)) {
 
             // We create new functionData information.
             StringRef fileNameRef = astContext->getSourceManager().getFilename(
@@ -95,7 +92,7 @@ bool FPReorderingAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
                 position++;
             }
 
-            fpReordering->addFunctionData(functionData->getName(), functionData);
+            reordering.addFunctionData(functionData->getName(), functionData);
         }
     }
 
@@ -111,16 +108,13 @@ bool FPReorderingRewriter::VisitCallExpr(clang::CallExpr* CE) {
         // We obtain the name of the function.
         std::string functionName = FD->getNameAsString();
 
-        // Function parameter reordering information.
-        FPReordering* fpReordering = this->semanticData->getFPReordering();
-
         // We check if this function is eligible for reordering.
-        if (fpReordering->isInFunctionReorderingMap(functionName)) {
+        if (reordering.isInFunctionReorderingMap(functionName)) {
             // DEBUG.
             llvm::outs() << "Call to function: " << functionName << " has to be rewritten!\n";
 
             // Get the reordering
-            FunctionData* functionData = fpReordering->getFunctionReorderings()[functionName];
+            FunctionData* functionData = reordering.getFunctionReorderings()[functionName];
             std::vector<FieldData> fieldData = functionData->getFieldData();
 
             for (unsigned iii = 0; iii < CE->getNumArgs(); iii++)
@@ -139,18 +133,15 @@ bool FPReorderingRewriter::VisitCallExpr(clang::CallExpr* CE) {
 // AST rewriter, used for rewriting source code.
 bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
 
-    // We get the function parameter reordering information.
-    FPReordering* fpReordering = this->semanticData->getFPReordering();
-
     // We obtain the function name.
     std::string functionName = FD->getNameAsString();
 
     // We check if this function is eligible for reordering.
-    if (fpReordering->isInFunctionReorderingMap(functionName)) {
+    if (reordering.isInFunctionReorderingMap(functionName)) {
 
         // We make sure we do not rewrite some function that has already
         // been rewritten (unless it is the definition!).
-        if (fpReordering->hasBeenRewritten(functionName) &&
+        if (reordering.hasBeenRewritten(functionName) &&
             !FD->isThisDeclarationADefinition()) {
             return true;
         }
@@ -159,7 +150,7 @@ bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
         llvm::outs() << "Rewriting function: " << functionName << " definition: " << FD->hasBody() << "\n";
 
         // We need to rewrite it.
-        FunctionData* functionData = fpReordering->getFunctionReorderings()[functionName];
+        FunctionData* functionData = reordering.getFunctionReorderings()[functionName];
 
         // We obtain the fields data of the function.
         std::vector<FieldData> fieldData = functionData->getFieldData();
@@ -199,19 +190,20 @@ bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
         }
 
         // We add this function to the set of rewritten functions.
-        fpReordering->functionRewritten(functionName);
+        reordering.functionRewritten(functionName);
     }
     return true;
 }
 
 // Method used for the function parameter semantic transformation.
-void fpreordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings) {
+void fpreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings) {
 
     // Debug information.
     llvm::outs() << "Phase 1: Function Analysis\n";
 
     // We run the analysis phase.
-    Tool->run(new SemanticFrontendActionFactory(semanticData, rewriter, baseDirectory, Transformation::FPReordering, Phase::Analysis));
+    FPReordering reordering;
+    Tool->run(new SemanticFrontendActionFactory(reordering, rewriter, baseDirectory, Transformation::FPReordering, Phase::Analysis));
 
     // More analytics written to output.
     Json::Value analytics;
@@ -221,7 +213,7 @@ void fpreordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Too
     unsigned long amountChosen = 0;
     std::vector<FunctionOrdering> chosen;
     std::map<std::string, FunctionData*>::iterator it;
-    std::map<std::string, FunctionData*> functionMap = semanticData->getFPReordering()->getFunctionMap();
+    std::map<std::string, FunctionData*> functionMap = reordering.getFunctionMap();
     std::string outputPrefix = outputDirectory + "function_r_";
 
     // Add some analytics information.
@@ -391,15 +383,15 @@ void fpreordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Too
         FunctionData* chosenFunction = selectedFunctionOrdering.chosenFunction;
 
         // We add the modified function information to our semantic data.
-        semanticData->getFPReordering()->addFunctionReorderingData(chosenFunction->getName(), chosenFunction);
+        reordering.addFunctionReorderingData(chosenFunction->getName(), chosenFunction);
 
         llvm::outs() << "Phase 2: performing rewrite for version: " << processed + 1 << " function name: " << chosenFunction->getName() << "\n";
-        Tool->run(new SemanticFrontendActionFactory(semanticData, rewriter, baseDirectory, Transformation::FPReordering, Phase::Rewrite, processed+1, outputPrefix));
+        Tool->run(new SemanticFrontendActionFactory(reordering, rewriter, baseDirectory, Transformation::FPReordering, Phase::Rewrite, processed+1, outputPrefix));
 
         // We need to clear the set of structures that have been rewritten already.
         // We need to clear the set of structures that need to be reordered.
-        semanticData->getFPReordering()->clearRewritten();
-        semanticData->getFPReordering()->clearFunctionReorderings();
+        reordering.clearRewritten();
+        reordering.clearFunctionReorderings();
         processed++;
     }
 }

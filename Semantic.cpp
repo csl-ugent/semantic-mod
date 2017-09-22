@@ -20,7 +20,7 @@ std::string location2str(SourceLocation begin, SourceLocation end, SourceManager
 FrontendAction* SemanticFrontendActionFactory::create() {
 
     // We create a new instance of the frontend action.
-    return new SemanticFrontendAction(this->semanticData, this->rewriter, this->version, this->outputPrefix, this->baseDirectory, this->transType, this->phaseType);
+    return new SemanticFrontendAction(reordering, this->rewriter, this->version, this->outputPrefix, this->baseDirectory, this->transType, this->phaseType);
 }
 
 // Semantic frontend action: action that will start the consumer.
@@ -28,11 +28,11 @@ ASTConsumer* SemanticFrontendAction::CreateASTConsumer(CompilerInstance &CI, Str
 
     // We create a new AST consumer based on the type of transformation.
     if (this->transType == Transformation::StructReordering) {
-        return new StructReorderingASTConsumer(&CI, this->semanticData, this->rewriter, this->baseDirectory, this->phaseType);
+        return new StructReorderingASTConsumer(&CI, reordering, this->rewriter, this->baseDirectory, this->phaseType);
     } else if (this->transType == Transformation::FPReordering) {
-        return new FPReorderingASTConsumer(&CI, this->semanticData, this->rewriter, this->baseDirectory, this->phaseType);
+        return new FPReorderingASTConsumer(&CI, reordering, this->rewriter, this->baseDirectory, this->phaseType);
     } else if (this->transType == Transformation::SWCReordering) {
-        return new SWCReorderingASTConsumer(&CI, this->semanticData, this->rewriter, this->baseDirectory, this->phaseType);
+        return new SWCReorderingASTConsumer(&CI, reordering, this->rewriter, this->baseDirectory, this->phaseType);
     }
 }
 

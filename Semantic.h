@@ -42,7 +42,7 @@ std::string location2str(clang::SourceLocation begin, clang::SourceLocation end,
 // Semantic analyser frontend action: action that will start the consumer.
 class SemanticFrontendAction : public clang::ASTFrontendAction {
 private:
-    SemanticData* semanticData;
+    Reordering& reordering;
     clang::Rewriter* rewriter;
     int version;
     std::string outputPrefix;
@@ -50,8 +50,8 @@ private:
     Transformation::Type transType;
     Phase::Type phaseType;
 public:
-    explicit SemanticFrontendAction(SemanticData* semanticData, clang::Rewriter* rewriter, int version, std::string outputPrefix, std::string baseDirectory, Transformation::Type transType, Phase::Type phaseType)
-    : semanticData(semanticData),
+    explicit SemanticFrontendAction(Reordering& reordering, clang::Rewriter* rewriter, int version, std::string outputPrefix, std::string baseDirectory, Transformation::Type transType, Phase::Type phaseType)
+    : reordering(reordering),
       rewriter(rewriter),
       version(version),
       outputPrefix(outputPrefix),
@@ -69,7 +69,7 @@ public:
 class SemanticFrontendActionFactory : public clang::tooling::FrontendActionFactory
 {
 private:
-    SemanticData* semanticData;
+    Reordering& reordering;
     clang::Rewriter* rewriter;
     std::string baseDirectory;
     Transformation::Type transType;
@@ -78,8 +78,8 @@ private:
     std::string outputPrefix;
 
 public:
-    SemanticFrontendActionFactory(SemanticData* semanticData, clang::Rewriter* rewriter, std::string baseDirectory, Transformation::Type transType, Phase::Type phaseType, int version = 0, std::string outputPrefix = "")
-        : semanticData(semanticData),
+    SemanticFrontendActionFactory(Reordering& reordering, clang::Rewriter* rewriter, std::string baseDirectory, Transformation::Type transType, Phase::Type phaseType, int version = 0, std::string outputPrefix = "")
+        : reordering(reordering),
           rewriter(rewriter),
           baseDirectory(baseDirectory),
           transType(transType),

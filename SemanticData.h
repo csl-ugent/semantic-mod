@@ -138,8 +138,13 @@ public:
     }
 };
 
+class Reordering {
+  protected:
+    virtual ~Reordering() {}
+};
+
 // Structure reordering semantic modification.
-class StructReordering {
+class StructReordering : public Reordering {
 private:
 
     // Map containing all information regarding different structures.
@@ -194,7 +199,7 @@ public:
 };
 
 // Function parameter reordering semantic modification.
-class FPReordering {
+class FPReordering : public Reordering {
 private:
 
     // Map containing all information regarding different functions.
@@ -244,7 +249,7 @@ public:
 };
 
 // Switch case reordering semantic modification.
-class SWCReordering {
+class SWCReordering : public Reordering {
 private:
     // Map containing all information regarding different switches.
     std::map<unsigned, SwitchData*> switchMap;
@@ -290,46 +295,6 @@ public:
 
     // Clear the set of switches that have been rewritten already.
     void clearRewritten();
-};
-
-// Class containing all relevant semantic information.
-class SemanticData {
-private:
-
-    // Structreordering information.
-    StructReordering* structReordering;
-
-    // Function parameter reordering information.
-    FPReordering* fpReordering;
-
-    // Switch case reordering reordering information.
-    SWCReordering* swcReordering;
-
-public:
-
-    explicit SemanticData() {
-
-        // Allocate the necessary object containing relevant information.
-        structReordering = new StructReordering();
-        fpReordering = new FPReordering();
-        swcReordering = new SWCReordering();
-    }
-    ~SemanticData() {
-
-        // Delete the allocated objects.
-        delete structReordering;
-        delete fpReordering;
-        delete swcReordering;
-    }
-
-    // Obtain structreordering information.
-    StructReordering* getStructReordering() { return structReordering; }
-
-    // Obtain function parameter reordering information.
-    FPReordering* getFPReordering() { return fpReordering; }
-
-    // Obtain the switch case reordering information.
-    SWCReordering* getSWCReordering() {return swcReordering;}
 };
 
 #endif

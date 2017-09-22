@@ -94,8 +94,7 @@ bool StructReorderingAnalyser::VisitTranslationUnitDecl(clang::TranslationUnitDe
 
                             // We check if we already found this struct or not.
                             // If we didn't found this struct before, we add an entry for it.
-                            StructReordering* structReordering = this->semanticData->getStructReordering();
-                            if (structReordering->isInStructMap(newNameStr)) {
+                            if (reordering.isInStructMap(newNameStr)) {
                                 continue; // Structure already analysed...
                             }
 
@@ -135,7 +134,7 @@ bool StructReorderingAnalyser::VisitTranslationUnitDecl(clang::TranslationUnitDe
                             }
 
                             // We add it to the StructData map.
-                            structReordering->addStructData(structData->getName(), structData);
+                            reordering.addStructData(structData->getName(), structData);
                         }
                     }
                 }
@@ -153,8 +152,7 @@ bool StructReorderingAnalyser::VisitTranslationUnitDecl(clang::TranslationUnitDe
 
                 // We check if we already found this struct or not.
                 // If we didn't found this struct before, we add an entry for it.
-                StructReordering* structReordering = this->semanticData->getStructReordering();
-                if (structReordering->isInStructMap(structName) || structName == "") {
+                if (reordering.isInStructMap(structName) || structName == "") {
                     continue; // Structure already analysed...
                 } else {
                     // Some debug information.
@@ -227,7 +225,7 @@ bool StructReorderingAnalyser::VisitTranslationUnitDecl(clang::TranslationUnitDe
                     }
 
                     // We add it to the StructData map.
-                    structReordering->addStructData(structData->getName(), structData);
+                    reordering.addStructData(structData->getName(), structData);
                 }
             }
         }
@@ -235,11 +233,7 @@ bool StructReorderingAnalyser::VisitTranslationUnitDecl(clang::TranslationUnitDe
     return true;
 }
 
-void StructReorderingPreTransformationAnalysis::detectStructsRecursively(const Type* origType, SemanticData* semanticData) {
-
-    // We obtain all the struct data from the previous phase.
-    StructReordering* structReordering = semanticData->getStructReordering();
-
+void StructReorderingPreTransformationAnalysis::detectStructsRecursively(const Type* origType, StructReordering& reordering) {
     // We obtain the canonical qual type/type.
     QualType qualTypeCn = origType->getCanonicalTypeInternal();
     const Type* type = qualTypeCn.getTypePtrOrNull();
@@ -269,10 +263,10 @@ void StructReorderingPreTransformationAnalysis::detectStructsRecursively(const T
         }
 
         // We check if the struct is in the struct map.
-        if (structReordering->isInStructMap(structName)) {
+        if (reordering.isInStructMap(structName)) {
 
             // We remove it from the struct map.
-            structReordering->removeStructData(structName);
+            reordering.removeStructData(structName);
             llvm::outs() << "Removed struct: " << structName << "!\n";
         }
 
@@ -284,7 +278,7 @@ void StructReorderingPreTransformationAnalysis::detectStructsRecursively(const T
             const Type* subType = (field->getType()).getTypePtrOrNull();
 
             // We handle the field recursively.
-            this->detectStructsRecursively(subType, semanticData);
+            this->detectStructsRecursively(subType, reordering);
         }
     } else if (type != NULL && type->isUnionType()) { // Handle unions.
 
@@ -299,7 +293,7 @@ void StructReorderingPreTransformationAnalysis::detectStructsRecursively(const T
             const Type* subType = (field->getType()).getTypePtrOrNull();
 
             // We handle the field recursively.
-            this->detectStructsRecursively(subType, semanticData);
+            this->detectStructsRecursively(subType, reordering);
         }
     } else if (type != NULL && type->isArrayType()) { // Handle arrays.
 
@@ -307,7 +301,7 @@ void StructReorderingPreTransformationAnalysis::detectStructsRecursively(const T
         const Type* subType = (type->getAsArrayTypeUnsafe()->getElementType()).getTypePtrOrNull();
 
         // We handle the type recursively.
-        this->detectStructsRecursively(subType, semanticData);
+        this->detectStructsRecursively(subType, reordering);
     }
 }
 
@@ -324,7 +318,7 @@ bool StructReorderingPreTransformationAnalysis::VisitTranslationUnitDecl(clang::
             const Type* type = (D->getType()).getTypePtrOrNull();
 
             // We detect structs recursively and remove them from the struct map.
-            this->detectStructsRecursively(type, this->semanticData);
+            this->detectStructsRecursively(type, reordering);
         }
     }
     return true;
@@ -355,7 +349,7 @@ bool StructReorderingPreTransformationAnalysis::VisitDeclStmt(clang::DeclStmt *D
             if (qualType.isConstQualified() || D->isStaticLocal()) {
 
                 // We detect structs recursively and remove them from the struct map.
-                detectStructsRecursively(type, this->semanticData);
+                detectStructsRecursively(type, reordering);
             }
 
             // We check if the variable has an initializer.
@@ -365,7 +359,7 @@ bool StructReorderingPreTransformationAnalysis::VisitDeclStmt(clang::DeclStmt *D
                 if (InitListExpr* init = dyn_cast<InitListExpr>(D->getInit())) {
 
                     // We detect structs recursively and remove them from the struct map.
-                    detectStructsRecursively(type, this->semanticData);
+                    detectStructsRecursively(type, reordering);
                 }
             }
         }
@@ -409,17 +403,16 @@ bool StructReorderingRewriter::VisitTranslationUnitDecl(clang::TranslationUnitDe
                         std::string newNameStr = newName.str();
 
                         // We might need to rewrite this.
-                        StructReordering* structReordering = this->semanticData->getStructReordering();
-                        if (structReordering->isInStructReorderingMap(newNameStr)) {
+                        if (reordering.isInStructReorderingMap(newNameStr)) {
 
                             // We make sure we do not rewrite some structure that has already
                             // been rewritten.
-                            if (structReordering->hasBeenRewritten(newNameStr)) {
+                            if (reordering.hasBeenRewritten(newNameStr)) {
                                 continue;
                             }
 
                             // We need to rewrite it.
-                            StructData* structData = structReordering->getStructReorderings()[newNameStr];
+                            StructData* structData = reordering.getStructReorderings()[newNameStr];
 
                             // We obtain the fields data of the structure.
                             std::vector<FieldData> fieldData = structData->getFieldData();
@@ -474,7 +467,7 @@ bool StructReorderingRewriter::VisitTranslationUnitDecl(clang::TranslationUnitDe
                             }
 
                             // We add this structure to the set of rewritten structures.
-                            structReordering->structRewritten(newNameStr);
+                            reordering.structRewritten(newNameStr);
                         }
                     }
                 }
@@ -491,17 +484,16 @@ bool StructReorderingRewriter::VisitTranslationUnitDecl(clang::TranslationUnitDe
                 // We analyse the structure name.
                 std::string structName = D->getNameAsString();
 
-                StructReordering* structReordering = this->semanticData->getStructReordering();
-                if (structReordering->isInStructReorderingMap(structName)) {
+                if (reordering.isInStructReorderingMap(structName)) {
 
                     // We make sure we do not rewrite some structure that has already
                     // been rewritten.
-                    if (structReordering->hasBeenRewritten(structName)) {
+                    if (reordering.hasBeenRewritten(structName)) {
                         continue;
                     }
 
                     // We need to rewrite it.
-                    StructData* structData = structReordering->getStructReorderings()[structName];
+                    StructData* structData = reordering.getStructReorderings()[structName];
 
                     // We obtain the fields data of the structure.
                     std::vector<FieldData> fieldData = structData->getFieldData();
@@ -557,7 +549,7 @@ bool StructReorderingRewriter::VisitTranslationUnitDecl(clang::TranslationUnitDe
                     }
 
                     // We add this structure to the set of rewritten structures.
-                    structReordering->structRewritten(structName);
+                    reordering.structRewritten(structName);
                 }
             }
         }
@@ -566,7 +558,7 @@ bool StructReorderingRewriter::VisitTranslationUnitDecl(clang::TranslationUnitDe
 }
 
 // Method used for the structreordering semantic transformation.
-void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings) {
+void structReordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings) {
 
     // More analytics written to output.
     Json::Value analytics;
@@ -575,22 +567,23 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
     llvm::outs() << "Phase 1: Struct analysis\n";
 
     // We run the analysis phase.
-    Tool->run(new SemanticFrontendActionFactory(semanticData, rewriter, baseDirectory, Transformation::StructReordering, Phase::Analysis));
+    StructReordering reordering;
+    Tool->run(new SemanticFrontendActionFactory(reordering, rewriter, baseDirectory, Transformation::StructReordering, Phase::Analysis));
 
-    analytics["total_amount_of_structs"] = semanticData->getStructReordering()->getStructMap().size();
+    analytics["total_amount_of_structs"] = reordering.getStructMap().size();
 
     // Debug information.
     llvm::outs() << "Phase 2: Struct pre-transformation analysis\n";
 
     // We run the analysis phase.
-    Tool->run(new SemanticFrontendActionFactory(semanticData, rewriter, baseDirectory, Transformation::StructReordering, Phase::PreTransformationAnalysis));
+    Tool->run(new SemanticFrontendActionFactory(reordering, rewriter, baseDirectory, Transformation::StructReordering, Phase::PreTransformationAnalysis));
 
     // We determine the structs that will be reordered.
     unsigned long amount = amountOfReorderings;
     unsigned long amountChosen = 0;
     std::vector<StructOrdering> chosen;
     std::map<std::string, StructData*>::iterator it;
-    std::map<std::string, StructData*> structMap = semanticData->getStructReordering()->getStructMap();
+    std::map<std::string, StructData*> structMap = reordering.getStructMap();
     std::string outputPrefix = outputDirectory + "struct_r_";
 
     // Add some analytics information.
@@ -729,7 +722,7 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
 
         // We add the name of the struct that needs to be rewritten.
         structData->setFieldDefinitions(chosenStruct->getFieldDefinitions());
-        //semanticData->getStructReordering()->addStructNeedRewritten(chosenStruct->getName());
+        //reordering.addStructNeedRewritten(chosenStruct->getName());
 
         // Add the orderingstruct to the list of orderingstructs and
         // increase the amount we have chosen.
@@ -747,15 +740,15 @@ void structReordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool*
         StructData* chosenStruct = selectedStructOrdering.chosenStruct;
 
         // We add the modified structure information to our semantic data.
-        semanticData->getStructReordering()->addStructReorderingData(chosenStruct->getName(), chosenStruct);
+        reordering.addStructReorderingData(chosenStruct->getName(), chosenStruct);
 
         llvm::outs() << "Phase 3: performing rewrite for version: " << processed + 1 << " struct name: " << chosenStruct->getName() << "\n";
-        Tool->run(new SemanticFrontendActionFactory(semanticData, rewriter, baseDirectory, Transformation::StructReordering, Phase::Rewrite, processed+1, outputPrefix));
+        Tool->run(new SemanticFrontendActionFactory(reordering, rewriter, baseDirectory, Transformation::StructReordering, Phase::Rewrite, processed+1, outputPrefix));
 
         // We need to clear the set of structures that have been rewritten already.
         // We need to clear the set of structures that need to be reordered.
-        semanticData->getStructReordering()->clearRewritten();
-        semanticData->getStructReordering()->clearStructReorderings();
+        reordering.clearRewritten();
+        reordering.clearStructReorderings();
         processed++;
     }
 }

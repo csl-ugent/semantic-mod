@@ -18,7 +18,6 @@
 #include "StructReordering.h"
 #include "SWCReordering.h"
 #include "FPReordering.h"
-#include "SemanticData.h"
 #include "SemanticUtil.h"
 
 // Declares clang::SyntaxOnlyAction.
@@ -97,9 +96,6 @@ int main(int argc, const char **argv) {
     // Initialize the Tool.
     ClangTool Tool(OptionsParser.getCompilations(), srcPathList);
 
-    // The data that will be available during multiple phases.
-    SemanticData* semanticData = new SemanticData();
-
     // The rewriter that will be used for source-to-source transformations.
     Rewriter* rewriter = new Rewriter();
 
@@ -107,20 +103,19 @@ int main(int argc, const char **argv) {
     if (TransformationType == "StructReordering") {
 
         // We start the structreordering transformation.
-        structReordering(semanticData, rewriter, &Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
+        structReordering(rewriter, &Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
 
     } else if (TransformationType == "FPReordering") {
 
         // We start the function parameter reordering transformation.
-        fpreordering(semanticData, rewriter, &Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
+        fpreordering(rewriter, &Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
     } else if (TransformationType == "SWCReordering") {
 
         // We start the switch case reordering transformation.
-        swcreordering(semanticData, rewriter, &Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
+        swcreordering(rewriter, &Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
     }
 
     // Free used memory.
-    delete semanticData;
     delete rewriter;
 
     // Succes.

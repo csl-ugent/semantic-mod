@@ -23,20 +23,20 @@
 #include "clang/Basic/LangOptions.h"
 
 // Declaration of used methods.
-void structReordering(SemanticData* semanticData, clang::Rewriter* rewriter, clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);
+void structReordering(clang::Rewriter* rewriter, clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);
 
 // Semantic analyser, willl analyse different nodes within the AST.
 class StructReorderingAnalyser : public clang::RecursiveASTVisitor<StructReorderingAnalyser> {
 private:
     clang::ASTContext *astContext; // Used for getting additional AST info.
-    SemanticData* semanticData;
+    StructReordering& reordering;
     std::string baseDirectory;
 public:
     explicit StructReorderingAnalyser(clang::CompilerInstance *CI,
-                              SemanticData* semanticData,
+                              StructReordering& reordering,
                               std::string baseDirectory)
       : astContext(&(CI->getASTContext())),
-        semanticData(semanticData), // Initialize private members.
+        reordering(reordering), // Initialize private members.
         baseDirectory(baseDirectory)
     { }
 
@@ -49,17 +49,17 @@ public:
 class StructReorderingPreTransformationAnalysis : public clang::RecursiveASTVisitor<StructReorderingPreTransformationAnalysis> {
 private:
     clang::ASTContext *astContext; // Used for getting additional AST info.
-    SemanticData* semanticData;
+    StructReordering& reordering;
 public:
     explicit StructReorderingPreTransformationAnalysis(clang::CompilerInstance *CI,
-                                                    SemanticData* semanticData)
+                                                    StructReordering& reordering)
       : astContext(&(CI->getASTContext())),
-        semanticData(semanticData)
+        reordering(reordering)
     { }
 
     // Method used to detect struct types recursively and remove
     // them from the struct map.
-    void detectStructsRecursively(const clang::Type* type, SemanticData* semanticData);
+    void detectStructsRecursively(const clang::Type* type, StructReordering& reordering);
 
     // We want to investigate top-level things.
     virtual bool VisitTranslationUnitDecl(clang::TranslationUnitDecl* TD);
@@ -72,14 +72,14 @@ public:
 class StructReorderingRewriter : public clang::RecursiveASTVisitor<StructReorderingRewriter> {
 private:
     clang::ASTContext *astContext; // Used for getting additional AST info.
-    SemanticData* semanticData;
+    StructReordering& reordering;
     clang::Rewriter* rewriter;
 public:
     explicit StructReorderingRewriter(clang::CompilerInstance *CI,
-                              SemanticData* semanticData,
+                              StructReordering& reordering,
                               clang::Rewriter* rewriter)
       : astContext(&(CI->getASTContext())),
-        semanticData(semanticData),
+        reordering(reordering),
         rewriter(rewriter) // Initialize private members.
     {
         rewriter->setSourceMgr(astContext->getSourceManager(), astContext->getLangOpts());
@@ -96,7 +96,7 @@ private:
     StructReorderingAnalyser *visitorAnalysis;
     StructReorderingPreTransformationAnalysis *visitorPreTransformationAnalysis;
 
-    SemanticData* semanticData;
+    StructReordering& reordering;
     clang::Rewriter* rewriter;
     clang::CompilerInstance *CI;
     std::string baseDirectory;
@@ -104,11 +104,11 @@ private:
 public:
     // Override the constructor in order to pass CI.
     explicit StructReorderingASTConsumer(clang::CompilerInstance *CI,
-                                         SemanticData* semanticData,
+                                         Reordering& r,
                                          clang::Rewriter* rewriter,
                                          std::string baseDirectory,
                                          Phase::Type phaseType)
-        : semanticData(semanticData),
+        : reordering(static_cast<StructReordering&>(r)),
           rewriter(rewriter),
           CI(CI),
           baseDirectory(baseDirectory),
@@ -116,11 +116,11 @@ public:
     {
         // Visitor depends on the phase we are in.
         if (phaseType ==  Phase::Analysis) {
-            visitorAnalysis = new StructReorderingAnalyser(this->CI, semanticData, baseDirectory);
+            visitorAnalysis = new StructReorderingAnalyser(this->CI, reordering, baseDirectory);
         } else if (phaseType == Phase::Rewrite) {
-            visitorRewriter = new StructReorderingRewriter(this->CI, semanticData, rewriter);
+            visitorRewriter = new StructReorderingRewriter(this->CI, reordering, rewriter);
         } else if (phaseType == Phase::PreTransformationAnalysis) {
-            visitorPreTransformationAnalysis = new StructReorderingPreTransformationAnalysis(this->CI, semanticData);
+            visitorPreTransformationAnalysis = new StructReorderingPreTransformationAnalysis(this->CI, reordering);
         }
     }
 

@@ -23,20 +23,20 @@
 #include "clang/Basic/LangOptions.h"
 
 // Declaration of used methods.
-void swcreordering(SemanticData* semanticData, clang::Rewriter* rewriter, clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);
+void swcreordering(clang::Rewriter* rewriter, clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);
 
 // Semantic analyser, willl analyse different nodes within the AST.
 class SWCReorderingAnalyser : public clang::RecursiveASTVisitor<SWCReorderingAnalyser> {
 private:
     clang::ASTContext *astContext; // Used for getting additional AST info.
-    SemanticData* semanticData;
+    SWCReordering& reordering;
     std::string baseDirectory;
 public:
     explicit SWCReorderingAnalyser(clang::CompilerInstance *CI,
-                                  SemanticData* semanticData,
+                                  SWCReordering& reordering,
                                   std::string baseDirectory)
       : astContext(&(CI->getASTContext())),
-        semanticData(semanticData),
+        reordering(reordering),
         baseDirectory(baseDirectory)
     { }
 
@@ -48,14 +48,14 @@ public:
 class SWCReorderingRewriter : public clang::RecursiveASTVisitor<SWCReorderingRewriter> {
 private:
     clang::ASTContext *astContext; // Used for getting additional AST info.
-    SemanticData* semanticData;
+    SWCReordering& reordering;
     clang::Rewriter* rewriter;
 public:
     explicit SWCReorderingRewriter(clang::CompilerInstance *CI,
-                                   SemanticData* semanticData,
+                                   SWCReordering& reordering,
                                    clang::Rewriter* rewriter)
       : astContext(&(CI->getASTContext())),
-        semanticData(semanticData),
+        reordering(reordering),
         rewriter(rewriter) // Initialize private members.
     {
         rewriter->setSourceMgr(astContext->getSourceManager(), astContext->getLangOpts());
@@ -71,7 +71,7 @@ private:
     SWCReorderingRewriter *visitorRewriter;
     SWCReorderingAnalyser *visitorAnalysis;
 
-    SemanticData* semanticData;
+    SWCReordering& reordering;
     clang::Rewriter* rewriter;
     clang::CompilerInstance *CI;
     std::string baseDirectory;
@@ -79,11 +79,11 @@ private:
 public:
     // Override the constructor in order to pass CI.
     explicit SWCReorderingASTConsumer(clang::CompilerInstance *CI,
-                                     SemanticData* semanticData,
+                                     Reordering& r,
                                      clang::Rewriter* rewriter,
                                      std::string baseDirectory,
                                      Phase::Type phaseType)
-        : semanticData(semanticData),
+        : reordering(static_cast<SWCReordering&>(r)),
           rewriter(rewriter),
           CI(CI),
           baseDirectory(baseDirectory),
@@ -91,9 +91,9 @@ public:
     {
         // Visitor depends on the phase we are in.
         if (phaseType ==  Phase::Analysis) {
-            visitorAnalysis = new SWCReorderingAnalyser(this->CI, semanticData, baseDirectory);
+            visitorAnalysis = new SWCReorderingAnalyser(this->CI, reordering, baseDirectory);
         } else if (phaseType == Phase::Rewrite) {
-            visitorRewriter = new SWCReorderingRewriter(this->CI, semanticData, rewriter);
+            visitorRewriter = new SWCReorderingRewriter(this->CI, reordering, rewriter);
         }
     }
 

@@ -24,14 +24,11 @@ void SWCReorderingASTConsumer::HandleTranslationUnit(ASTContext &Context) {
 // AST visitor, used for analysis.
 bool SWCReorderingAnalyser::VisitSwitchStmt(clang::SwitchStmt* CS) {
 
-    // We keep track of the amount of switch statements.
-    SWCReordering* swcReordering = semanticData->getSWCReordering();
-
     // We obtain the location encoding of this switch statement.
     unsigned location = CS->getSwitchLoc().getRawEncoding();
 
     // We check if we already visited this switch statement or not.
-    if (swcReordering->isInSwitchMap(location)) {
+    if (reordering.isInSwitchMap(location)) {
         return true; // Switch case already visited.
     }
 
@@ -63,7 +60,7 @@ bool SWCReorderingAnalyser::VisitSwitchStmt(clang::SwitchStmt* CS) {
     SwitchData* switchData = new SwitchData(location, fileNameStr);
 
     // We add it to the SwitchData map.
-    swcReordering->addSwitchData(location, switchData);
+    reordering.addSwitchData(location, switchData);
 
     // Continue AST traversal.
     return true;
@@ -81,24 +78,22 @@ bool SWCReorderingRewriter::VisitSwitchStmt(clang::SwitchStmt* CS) {
 }
 
 // Method used for the switch case reordering semantic transformation.
-void swcreordering(SemanticData* semanticData, Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings) {
-
-    // Switch case reordering information.
-    SWCReordering* swcReordering = semanticData->getSWCReordering();
+void swcreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings) {
 
     // Debug information.
     llvm::outs() << "Phase 1: Switch Case Analysis\n";
 
     // We run the analysis phase.
-    Tool->run(new SemanticFrontendActionFactory(semanticData, rewriter, baseDirectory, Transformation::SWCReordering, Phase::Analysis));
+    SWCReordering reordering;
+    Tool->run(new SemanticFrontendActionFactory(reordering, rewriter, baseDirectory, Transformation::SWCReordering, Phase::Analysis));
 
     // We determine the amount of reorderings we are going to make.
     int amount = amountOfReorderings;
     int amountChosen = 0;
-    if (swcReordering->getSwitchMap().size() == 0) { // No switch cases...
+    if (reordering.getSwitchMap().size() == 0) { // No switch cases...
         amount = 0;
     } // In case we have at least one switch case we should be able
     // to infinite values to XOR with.
 
-    Tool->run(new SemanticFrontendActionFactory(semanticData, rewriter, baseDirectory, Transformation::SWCReordering, Phase::Rewrite));
+    Tool->run(new SemanticFrontendActionFactory(reordering, rewriter, baseDirectory, Transformation::SWCReordering, Phase::Rewrite));
 }
