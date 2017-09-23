@@ -83,7 +83,7 @@ void SemanticFrontendAction::writeChangesToOutput() {
 
         // Optionally create required subdirectories.
         {
-            int subDirectoryPos = fileName.find_last_of("/\\");
+            size_t subDirectoryPos = fileName.find_last_of("/\\");
             if (subDirectoryPos != std::string::npos) {
                 llvm::outs() << "Creating subdirectories..." << "\n";
                 std::string subdirectories = fileName.substr(0, fileName.find_last_of("/\\"));

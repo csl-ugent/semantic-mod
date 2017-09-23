@@ -376,7 +376,7 @@ void fpreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory
     }
 
     // We perform the rewrite operations.
-    int processed = 0;
+    unsigned long processed = 0;
     while (processed < amount)
     {
 

@@ -426,7 +426,7 @@ bool StructReorderingRewriter::VisitTranslationUnitDecl(clang::TranslationUnitDe
                                 FieldData substitute;
 
                                 // Iterate over all reordered elements.
-                                for (int i = 0; i < fieldData.size(); i++) {
+                                for (size_t i = 0; i < fieldData.size(); i++) {
 
                                     // We get the substitute field.
                                     substitute = fieldData[i];
@@ -508,7 +508,7 @@ bool StructReorderingRewriter::VisitTranslationUnitDecl(clang::TranslationUnitDe
                         FieldData substitute;
 
                         // Iterate over all reordered elements.
-                        for (int i = 0; i < fieldData.size(); i++) {
+                        for (size_t i = 0; i < fieldData.size(); i++) {
 
                             // We get the substitute field.
                             substitute = fieldData[i];
@@ -731,7 +731,7 @@ void structReordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirec
     }
 
     // We perform the rewrite operations.
-    int processed = 0;
+    unsigned long processed = 0;
     while (processed < amount)
     {
 
