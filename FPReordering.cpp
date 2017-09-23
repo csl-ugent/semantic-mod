@@ -41,9 +41,11 @@ bool FPReorderingAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
         // We obtain the function name.
         std::string functionName = FDDef->getNameAsString();
 
-        // We check if the function is eligible (enough parameters, not main) and whether we already identified the function or not.
-        // TODO: This should actually check for exported functions, not just main.
-        if (!FD->isMain() && FD->param_size() > 1 && !reordering.isInFunctionMap(functionName)) {
+        // If we haven't already selected the function, check if the function is eligible:
+        // - can't be main (TODO: This should actually check for exported functions, not just main)
+        // - can't be variadic (perhaps we can handle this in the future)
+        // - has to have enough parameters, so at least 2
+        if (!reordering.isInFunctionMap(functionName) && !FD->isMain() && !FD->isVariadic() && FD->param_size() > 1) {
 
             // We create new functionData information.
             StringRef fileNameRef = astContext->getSourceManager().getFilename(
