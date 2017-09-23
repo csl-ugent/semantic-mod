@@ -41,7 +41,7 @@ public:
     { }
 
     // We want to investigate FunctionDecl's.
-    virtual bool VisitFunctionDecl(clang::FunctionDecl* FD);
+    bool VisitFunctionDecl(clang::FunctionDecl* FD);
 };
 
 // Semantic Rewriter, will rewrite source code based on the AST.
@@ -62,10 +62,10 @@ public:
     }
 
     // We need to rewrite calls to these reorered functions.
-    virtual bool VisitCallExpr(clang::CallExpr* CE);
+    bool VisitCallExpr(clang::CallExpr* CE);
 
     // We want to investigate FunctionDecl's.
-    virtual bool VisitFunctionDecl(clang::FunctionDecl* FD);
+    bool VisitFunctionDecl(clang::FunctionDecl* FD);
 };
 
 // FPReordering AST Consumer.
@@ -101,7 +101,7 @@ public:
     }
 
     // Override this to call our SemanticAnalyser on the entire source file.
-    virtual void HandleTranslationUnit(clang::ASTContext &Context);
+    void HandleTranslationUnit(clang::ASTContext &Context);
 };
 
 #endif

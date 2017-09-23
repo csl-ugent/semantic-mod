@@ -60,9 +60,9 @@ public:
       phaseType(phaseType)
     {}
 
-    virtual clang::ASTConsumer *CreateASTConsumer(clang::CompilerInstance &CI, llvm::StringRef file);
-    virtual void EndSourceFileAction();
-    virtual void writeChangesToOutput();
+    clang::ASTConsumer *CreateASTConsumer(clang::CompilerInstance &CI, llvm::StringRef file);
+    void EndSourceFileAction();
+    void writeChangesToOutput();
 };
 
 // Frontend action factory.

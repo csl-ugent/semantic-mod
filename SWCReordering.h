@@ -41,7 +41,7 @@ public:
     { }
 
     // We want to investigate switch statements.
-    virtual bool VisitSwitchStmt(clang::SwitchStmt* CS);
+    bool VisitSwitchStmt(clang::SwitchStmt* CS);
 };
 
 // Semantic Rewriter, will rewrite source code based on the AST.
@@ -62,7 +62,7 @@ public:
     }
 
     // We want to rewrite switch statements.
-    virtual bool VisitSwitchStmt(clang::SwitchStmt* CS);
+    bool VisitSwitchStmt(clang::SwitchStmt* CS);
 };
 
 // SWCReordering AST Consumer.
@@ -98,7 +98,7 @@ public:
     }
 
     // Override this to call our SemanticAnalyser on the entire source file.
-    virtual void HandleTranslationUnit(clang::ASTContext &Context);
+    void HandleTranslationUnit(clang::ASTContext &Context);
 };
 
 #endif

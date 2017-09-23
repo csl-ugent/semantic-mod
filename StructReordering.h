@@ -41,7 +41,7 @@ public:
     { }
 
     // We want to investigate top-level things.
-    virtual bool VisitTranslationUnitDecl(clang::TranslationUnitDecl* TD);
+    bool VisitTranslationUnitDecl(clang::TranslationUnitDecl* TD);
 };
 
 
@@ -62,10 +62,10 @@ public:
     void detectStructsRecursively(const clang::Type* type, StructReordering& reordering);
 
     // We want to investigate top-level things.
-    virtual bool VisitTranslationUnitDecl(clang::TranslationUnitDecl* TD);
+    bool VisitTranslationUnitDecl(clang::TranslationUnitDecl* TD);
 
     // We want to investigate (local) declaration statements.
-    virtual bool VisitDeclStmt(clang::DeclStmt *DeclStmt);
+    bool VisitDeclStmt(clang::DeclStmt *DeclStmt);
 };
 
 // Semantic Rewriter, will rewrite source code based on the AST.
@@ -86,7 +86,7 @@ public:
     }
 
     // We want to investigate top-level things.
-    virtual bool VisitTranslationUnitDecl(clang::TranslationUnitDecl* TD);
+    bool VisitTranslationUnitDecl(clang::TranslationUnitDecl* TD);
 };
 
 // StructReordering AST Consumer.
@@ -125,7 +125,7 @@ public:
     }
 
     // Override this to call our SemanticAnalyser on the entire source file.
-    virtual void HandleTranslationUnit(clang::ASTContext &Context);
+    void HandleTranslationUnit(clang::ASTContext &Context);
 };
 
 #endif
