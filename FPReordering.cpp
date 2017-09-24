@@ -22,13 +22,11 @@ typedef struct functionOrdering_ {
 
 // AST visitor, used for analysis.
 bool FPReorderingAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
-    const clang::FunctionDecl* FDDef;
-
     // We make sure we iterate over the definition.
-    if (FD->hasBody(FDDef)) {
+    if (FD->hasBody()) {
 
         // We obtain the function name.
-        std::string functionName = FDDef->getNameAsString();
+        std::string functionName = FD->getNameAsString();
 
         // If we haven't already selected the function, check if the function is eligible:
         // - can't be main (TODO: This should actually check for exported functions, not just main)
@@ -37,8 +35,7 @@ bool FPReorderingAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
         if (!reordering.isInFunctionMap(functionName) && !FD->isMain() && !FD->isVariadic() && FD->param_size() > 1) {
 
             // We create new functionData information.
-            StringRef fileNameRef = astContext->getSourceManager().getFilename(
-                FD->getLocation());
+            StringRef fileNameRef = astContext->getSourceManager().getFilename(FD->getLocation());
 
             std::string fileNameStr;
             if (fileNameRef.data()) {
@@ -51,11 +48,10 @@ bool FPReorderingAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
                     // the base directory...
                     return true;
                 }
-            } else {
-
+            }
+            else
                 // Invalid function to analyse... (header name cannot be found?)
                 return true;
-            }
 
             // DEBUG information.
             llvm::outs() << "Found valid function: " << functionName << "\n";
@@ -69,7 +65,7 @@ bool FPReorderingAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
             std::string fieldType;
             SourceRange sourceRange;
             int position = 0;
-            for (it = FDDef->param_begin(); it != FDDef->param_end(); ++it) {
+            for (it = FD->param_begin(); it != FD->param_end(); ++it) {
 
                 // We obtain the parameter variable declaration.
                 ParmVarDecl *param = *it;
