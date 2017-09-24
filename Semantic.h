@@ -10,10 +10,10 @@
 #include "SemanticData.h"
 
 #include "clang/AST/AST.h"
+#include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
@@ -35,6 +35,69 @@ namespace Phase {
         Analysis, PreTransformationAnalysis, Rewrite
     };
 }
+
+// Default version of the pre-transformation analyser, for those reordering's that don't have any
+class DefaultPreTransformationAnalysis : public clang::RecursiveASTVisitor<DefaultPreTransformationAnalysis> {
+private:
+    clang::ASTContext *astContext; // Used for getting additional AST info.
+    Reordering& reordering;
+public:
+    explicit DefaultPreTransformationAnalysis(clang::CompilerInstance *CI,
+                                                    Reordering& reordering)
+      : astContext(&(CI->getASTContext())),
+        reordering(reordering)
+    { }
+};
+
+// Reordering ASTConsumer
+template <typename ReorderingType, typename AnalyserType,  typename RewriterType, typename PreTransformationAnalyserType = DefaultPreTransformationAnalysis>
+class ReorderingASTConsumer : public clang::ASTConsumer {
+private:
+    ReorderingType& reordering;
+    clang::Rewriter* rewriter;
+    clang::CompilerInstance *CI;
+    std::string baseDirectory;
+    Phase::Type phaseType;
+public:
+    // Override the constructor in order to pass CI.
+    explicit ReorderingASTConsumer(clang::CompilerInstance *CI,
+                                     Reordering& r,
+                                     clang::Rewriter* rewriter,
+                                     std::string baseDirectory,
+                                     Phase::Type phaseType)
+        : reordering(static_cast<ReorderingType&>(r)),
+          rewriter(rewriter),
+          CI(CI),
+          baseDirectory(baseDirectory),
+          phaseType(phaseType)
+    {
+    }
+
+    // Override this to call our SemanticAnalyser on the entire source file.
+    void HandleTranslationUnit(clang::ASTContext &Context) {
+         // Visitor depends on the phase we are in.
+        switch(phaseType) {
+            case Phase::Analysis:
+                {
+                    AnalyserType visitor = AnalyserType(this->CI, reordering, baseDirectory);
+                    visitor.TraverseDecl(Context.getTranslationUnitDecl());
+                    break;
+                }
+            case Phase::PreTransformationAnalysis:
+                {
+                    PreTransformationAnalyserType visitor = PreTransformationAnalyserType(this->CI, reordering);
+                    visitor.TraverseDecl(Context.getTranslationUnitDecl());
+                    break;
+                }
+            case Phase::Rewrite:
+                {
+                    RewriterType visitor = RewriterType(this->CI, reordering, rewriter);
+                    visitor.TraverseDecl(Context.getTranslationUnitDecl());
+                    break;
+                }
+        }
+    }
+};
 
 // General utility functions.
 std::string location2str(clang::SourceLocation begin, clang::SourceLocation end, clang::SourceManager* sm, const clang::LangOptions* lopt);

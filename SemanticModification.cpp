@@ -34,9 +34,7 @@
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTConsumer.h"
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/Frontend/ASTConsumers.h"
 // Rewriter
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/Rewriters.h"

@@ -19,17 +19,6 @@ typedef struct functionOrdering_ {
     FunctionData* chosenFunction;
 } FunctionOrdering;
 
-// Override this to call our SemanticAnalyser on the entire source file.
-void FPReorderingASTConsumer::HandleTranslationUnit(ASTContext &Context) {
-
-     // Visitor depends on the phase we are in.
-     if (phaseType == Phase::Analysis) {
-         this->visitorAnalysis->TraverseDecl(Context.getTranslationUnitDecl());
-     } else if (phaseType == Phase::Rewrite) {
-         this->visitorRewriter->TraverseDecl(Context.getTranslationUnitDecl());
-     }
-}
-
 
 // AST visitor, used for analysis.
 bool FPReorderingAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {

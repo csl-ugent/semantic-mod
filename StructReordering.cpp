@@ -17,19 +17,6 @@ typedef struct structOrdering_ {
     StructData* chosenStruct;
 } StructOrdering;
 
-// Override this to call our SemanticAnalyser on the entire source file.
-void StructReorderingASTConsumer::HandleTranslationUnit(ASTContext &Context) {
-
-     // Visitor depends on the phase we are in.
-     if (phaseType == Phase::Analysis) {
-         this->visitorAnalysis->TraverseDecl(Context.getTranslationUnitDecl());
-     } else if (phaseType == Phase::Rewrite) {
-         this->visitorRewriter->TraverseDecl(Context.getTranslationUnitDecl());
-     } else if (phaseType == Phase::PreTransformationAnalysis) {
-         this->visitorPreTransformationAnalysis->TraverseDecl(Context.getTranslationUnitDecl());
-     }
-}
-
 // AST visitor, used for analysis.
 bool StructReorderingAnalyser::VisitTranslationUnitDecl(clang::TranslationUnitDecl* TD) {
     clang::DeclContext::decl_iterator it;

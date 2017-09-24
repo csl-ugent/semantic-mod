@@ -8,12 +8,12 @@
 #include <fstream>
 
 #include "Semantic.h"
+#include "SemanticData.h"
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
@@ -65,40 +65,7 @@ public:
     bool VisitSwitchStmt(clang::SwitchStmt* CS);
 };
 
-// SWCReordering AST Consumer.
-class SWCReorderingASTConsumer : public clang::ASTConsumer {
-private:
-    SWCReorderingRewriter *visitorRewriter;
-    SWCReorderingAnalyser *visitorAnalysis;
-
-    SWCReordering& reordering;
-    clang::Rewriter* rewriter;
-    clang::CompilerInstance *CI;
-    std::string baseDirectory;
-    Phase::Type phaseType;
-public:
-    // Override the constructor in order to pass CI.
-    explicit SWCReorderingASTConsumer(clang::CompilerInstance *CI,
-                                     Reordering& r,
-                                     clang::Rewriter* rewriter,
-                                     std::string baseDirectory,
-                                     Phase::Type phaseType)
-        : reordering(static_cast<SWCReordering&>(r)),
-          rewriter(rewriter),
-          CI(CI),
-          baseDirectory(baseDirectory),
-          phaseType(phaseType)
-    {
-        // Visitor depends on the phase we are in.
-        if (phaseType ==  Phase::Analysis) {
-            visitorAnalysis = new SWCReorderingAnalyser(this->CI, reordering, baseDirectory);
-        } else if (phaseType == Phase::Rewrite) {
-            visitorRewriter = new SWCReorderingRewriter(this->CI, reordering, rewriter);
-        }
-    }
-
-    // Override this to call our SemanticAnalyser on the entire source file.
-    void HandleTranslationUnit(clang::ASTContext &Context);
-};
+// AST Consumer
+typedef ReorderingASTConsumer<SWCReordering, SWCReorderingAnalyser, SWCReorderingRewriter> SWCReorderingASTConsumer;
 
 #endif

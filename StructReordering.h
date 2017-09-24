@@ -8,12 +8,12 @@
 #include <fstream>
 
 #include "Semantic.h"
+#include "SemanticData.h"
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
@@ -89,43 +89,7 @@ public:
     bool VisitTranslationUnitDecl(clang::TranslationUnitDecl* TD);
 };
 
-// StructReordering AST Consumer.
-class StructReorderingASTConsumer : public clang::ASTConsumer {
-private:
-    StructReorderingRewriter *visitorRewriter;
-    StructReorderingAnalyser *visitorAnalysis;
-    StructReorderingPreTransformationAnalysis *visitorPreTransformationAnalysis;
-
-    StructReordering& reordering;
-    clang::Rewriter* rewriter;
-    clang::CompilerInstance *CI;
-    std::string baseDirectory;
-    Phase::Type phaseType;
-public:
-    // Override the constructor in order to pass CI.
-    explicit StructReorderingASTConsumer(clang::CompilerInstance *CI,
-                                         Reordering& r,
-                                         clang::Rewriter* rewriter,
-                                         std::string baseDirectory,
-                                         Phase::Type phaseType)
-        : reordering(static_cast<StructReordering&>(r)),
-          rewriter(rewriter),
-          CI(CI),
-          baseDirectory(baseDirectory),
-          phaseType(phaseType)
-    {
-        // Visitor depends on the phase we are in.
-        if (phaseType ==  Phase::Analysis) {
-            visitorAnalysis = new StructReorderingAnalyser(this->CI, reordering, baseDirectory);
-        } else if (phaseType == Phase::Rewrite) {
-            visitorRewriter = new StructReorderingRewriter(this->CI, reordering, rewriter);
-        } else if (phaseType == Phase::PreTransformationAnalysis) {
-            visitorPreTransformationAnalysis = new StructReorderingPreTransformationAnalysis(this->CI, reordering);
-        }
-    }
-
-    // Override this to call our SemanticAnalyser on the entire source file.
-    void HandleTranslationUnit(clang::ASTContext &Context);
-};
+// AST Consumer
+typedef ReorderingASTConsumer<StructReordering, StructReorderingAnalyser, StructReorderingRewriter, StructReorderingPreTransformationAnalysis> StructReorderingASTConsumer;
 
 #endif
