@@ -173,7 +173,12 @@ void fpreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory
             ordering.push_back(iii);
         }
         output["original"]["fields"] = original;
-        std::random_shuffle(ordering.begin(), ordering.end());
+
+        // Make sure the modified ordering isn't the same as the original
+        std::vector<unsigned> original_ordering = ordering;
+        do {
+            std::random_shuffle(ordering.begin(), ordering.end());
+        } while (original_ordering == ordering);
 
         // Check if this transformation isn't duplicate. If it is, we try again
         bool found = false;
