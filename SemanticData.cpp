@@ -63,41 +63,6 @@ StructReordering::~StructReordering() {
     }
 }
 
-bool FPReordering::isInFunctionMap(std::string name) {
-
-    // We check if the name is already defined in the map or not.
-    return !(this->functionMap.find(name) == this->functionMap.end());
-}
-
-bool FPReordering::isInFunctionReorderingMap(std::string name) {
-
-    // We check if the name is already defined in the map or not.
-    return !(this->functionReorderings.find(name) == this->functionReorderings.end());
-}
-
-void FPReordering::addFunctionData(std::string name, FunctionData* data) {
-
-    // We add the function and its corresponding data to the function map.
-    this->functionMap[name] = data;
-}
-
-void FPReordering::addFunctionReorderingData(std::string name, FunctionData* data) {
-
-    // We add the function and its corresponding data to the function
-    // reordering data map.
-    this->functionReorderings[name] = data;
-}
-
-bool FPReordering::hasBeenRewritten(std::string name) {
-
-    // We check if the name is already defined in the set or not.
-    return !(this->rewritten.find(name) == this->rewritten.end());
-}
-
-void FPReordering::functionRewritten(std::string name) {
-    this->rewritten.insert(name);
-}
-
 bool SWCReordering::isInSwitchMap(unsigned key) {
 
     // We check if the name is already defined in the map or not.
@@ -133,24 +98,6 @@ bool SWCReordering::hasBeenRewritten(unsigned key) {
     return !(this->rewritten.find(key) == this->rewritten.end());
 }
 
-FPReordering::~FPReordering() {
-
-    // We deallocate all allocated memory.
-    std::map<std::string, FunctionData*>::iterator it;
-
-    for (it = this->functionMap.begin(); it != this->functionMap.end(); it++ )
-    {
-        // We delete the allocated FunctionData objects.
-        delete it->second;
-    }
-
-    for (it = this->functionReorderings.begin(); it != this->functionReorderings.end(); it++ )
-    {
-        // We delete the allocated FunctionData objects.
-        delete it->second;
-    }
-}
-
 SWCReordering::~SWCReordering() {
 
     // We deallocate all allocated memory.
@@ -170,12 +117,6 @@ SWCReordering::~SWCReordering() {
 }
 
 void StructData::addFieldData(int position, std::string fieldName, std::string fieldType, clang::SourceRange sourceRange) {
-
-    // We add the data to the existing field data.
-    this->fieldData.push_back(FieldData({position, fieldName, fieldType, sourceRange}));
-}
-
-void FunctionData::addFieldData(int position, std::string fieldName, std::string fieldType, clang::SourceRange sourceRange) {
 
     // We add the data to the existing field data.
     this->fieldData.push_back(FieldData({position, fieldName, fieldType, sourceRange}));
@@ -205,20 +146,6 @@ void StructReordering::clearRewritten() {
     // We empty (clear) the set itself...
     this->rewritten.clear();
 }
-
-
-void FPReordering::clearFunctionReorderings() {
-
-    // We empty (clear) the set itself...
-    this->functionReorderings.clear();
-}
-
-void FPReordering::clearRewritten() {
-
-    // We empty (clear) the set itself...
-    this->rewritten.clear();
-}
-
 
 void SWCReordering::clearSwitchReorderings() {
 

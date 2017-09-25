@@ -4,6 +4,8 @@
 #include <map>
 #include <set>
 #include <string>
+
+#include "clang/AST/Decl.h"
 #include "clang/Basic/SourceManager.h"
 
 // Data of fields appearing within a structure.
@@ -72,38 +74,6 @@ public:
 
     // Method used to check if this struct has field definitions.
     bool hasFieldDefinitions();
-};
-
-// Function AST data.
-class FunctionData {
-private:
-    // The name of this function.
-    std::string name;
-
-    // The fileName in which this function appears.
-    std::string fileName;
-
-    // Information regarding the fields within the structure.
-    std::vector<FieldData> fieldData;
-
-public:
-
-    explicit FunctionData(std::string name, std::string fileName): name(name), fileName(fileName) {};
-
-    // Obtain the name of this function.
-    std::string getName() { return this->name; }
-
-    // Obtain the fileName in which this function is defined.
-    std::string getFileName() {return this->fileName; }
-
-    // Obtain the field data.
-    std::vector<FieldData> getFieldData() { return this->fieldData; }
-
-    // Obtain the amount of field data fields.
-    int getFieldDataSize() { return this->fieldData.size(); }
-
-    // Adding field data.
-    void addFieldData(int position, std::string fieldName, std::string fieldType, clang::SourceRange sourceRange);
 };
 
 // Switch AST data.
@@ -195,56 +165,6 @@ public:
     void clearStructReorderings();
 
     // Clear the set of structures that have been rewritten already.
-    void clearRewritten();
-};
-
-// Function parameter reordering semantic modification.
-class FPReordering : public Reordering {
-private:
-
-    // Map containing all information regarding different functions.
-    std::map<std::string, FunctionData*> functionMap;
-
-    // Map containing all information regarding reorderings.
-    std::map<std::string, FunctionData*> functionReorderings;
-
-    // Set containing all functions that have been rewritten already.
-    std::set<std::string> rewritten;
-
-public:
-    explicit FPReordering() {}
-    ~FPReordering();
-
-    // Obtain the function information map.
-    std::map<std::string, FunctionData*> getFunctionMap() { return functionMap; }
-
-    // Obtain the function reordering information map.
-    std::map<std::string, FunctionData*> getFunctionReorderings() { return functionReorderings; }
-
-    // Check if a function is already defined as a key in the function map.
-    bool isInFunctionMap(std::string name);
-
-    // Check if a struct is already defined as a key in the function reordering map.
-    bool isInFunctionReorderingMap(std::string name);
-
-    // Method used to add function reordering data to the function reordering
-    // information map.
-    void addFunctionReorderingData(std::string name, FunctionData* data);
-
-    // Method used to add function data to the function data map.
-    // This object will take ownership of the Function parameter and data.
-    void addFunctionData(std::string name, FunctionData* data);
-
-    // Method used to add a function to the set of rewritten functions.
-    void functionRewritten(std::string name);
-
-    // Check if a function has been rewritten already.
-    bool hasBeenRewritten(std::string name);
-
-    // Method used to clear the function reordering information map.
-    void clearFunctionReorderings();
-
-    // Clear the set of functions that have been rewritten already.
     void clearRewritten();
 };
 
