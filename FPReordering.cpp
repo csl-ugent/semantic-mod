@@ -24,6 +24,20 @@ bool FPReorderingAnalyser::VisitCallExpr(clang::CallExpr* CE) {
 
         if (CE->getLocStart().isMacroID()) // Invalidate the function if it's in a macro.
             reordering.invalidateFunction(function, "function is used in a macro");
+        else
+        {
+            // Check if any of the argument expression has side effects. In this case we invalidate the function.
+            // If one of the arguments is a macro we can't be sure if it has any side effects or not, therefore
+            // we assume the worst and invalidate the function.
+            for (unsigned iii = 0; iii < CE->getNumArgs(); iii++)
+            {
+                auto arg = CE->getArg(iii);
+                if (arg->HasSideEffects(astContext, true))
+                {
+                    reordering.invalidateFunction(function, "in one of the function invocations, one of the arguments has side effects");
+                    break;
+                }
+            }
         }
     }
 
