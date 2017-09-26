@@ -15,6 +15,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/Rewriters.h"
+#include "llvm/ADT/MapVector.h"
 
 // Declaration of used methods.
 void fpreordering(clang::Rewriter* rewriter, clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);
@@ -52,15 +53,23 @@ class FunctionUnique {
 
             return true;
         }
+        bool operator< (const FunctionUnique& function) const
+        {
+            // Create string representation of the functions so we can correctly compare
+            std::string left = global ? name : name + ":" + fileName;
+            std::string right = function.global ? function.name : function.name + ":" + function.fileName;
+
+            return left < right;
+        }
 };
 
 class FunctionData {
     public:
-        FunctionUnique function;
+        bool valid;
         std::vector<FunctionParam> params;
 
-        FunctionData(const FunctionUnique& function, const clang::FunctionDecl* FD)
-            : function(function)
+        FunctionData(bool valid = true) : valid(valid) {}
+        void addParams(clang::FunctionDecl* FD)
         {
             for (unsigned iii = 0; iii < FD->getNumParams(); iii++) {
                 const clang::ParmVarDecl* param = FD->getParamDecl(iii);
@@ -83,7 +92,12 @@ public:
     explicit FPReordering() {}
 
     // Map containing all information regarding different functions.
-    std::vector<FunctionData> candidates;
+    llvm::MapVector<FunctionUnique, FunctionData, std::map<FunctionUnique, unsigned>> candidates;
+    void invalidateFunction(const FunctionUnique& FU, const std::string& reason) {
+        llvm::outs() << "Invalidate function: " << FU.getName() << ". Reason: " << reason << ".\n";
+        FunctionData& data = candidates[FU];
+        data.valid = false;
+    }
 
     // The transformation to apply
     FPTransformation* transformation;
@@ -104,7 +118,8 @@ public:
         baseDirectory(baseDirectory)
     { }
 
-    // We want to investigate FunctionDecl's.
+    // We want to investigate Function declarations and invocations
+    bool VisitCallExpr(clang::CallExpr* CE);
     bool VisitFunctionDecl(clang::FunctionDecl* FD);
 };
 

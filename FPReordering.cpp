@@ -12,6 +12,23 @@ using namespace clang;
 using namespace llvm;
 using namespace clang::tooling;
 
+bool FPReorderingAnalyser::VisitCallExpr(clang::CallExpr* CE) {
+    FunctionDecl* FD = CE->getDirectCallee();
+    if (FD) {
+        const FunctionUnique function(FD, astContext);
+        const std::string& fileName = function.getFileName();
+
+        // We make sure the file is contained in our base directory...
+        if (fileName.find(this->baseDirectory) == std::string::npos)
+            return true;
+
+        if (CE->getLocStart().isMacroID()) // Invalidate the function if it's in a macro.
+            reordering.invalidateFunction(function, "function is used in a macro");
+        }
+    }
+
+    return true;
+}
 
 // AST visitor, used for analysis.
 bool FPReorderingAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
@@ -29,7 +46,12 @@ bool FPReorderingAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
             if (fileName.find(this->baseDirectory) == std::string::npos)
                 return true;
 
-            reordering.candidates.emplace_back(function, FD);
+            FunctionData& data = reordering.candidates[function];
+            if (data.valid)
+            {
+                llvm::outs() << "Found valid function: " << FD->getNameAsString() << "\n";
+                data.addParams(FD);
+            }
         }
     }
 
@@ -101,18 +123,25 @@ void fpreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory
     // Debug information.
     llvm::outs() << "Phase 1: Function Analysis\n";
 
-    // We run the analysis phase and get the candidates
+    // We run the analysis phase and get the valid candidates
     FPReordering reordering;
     Tool->run(new SemanticFrontendActionFactory(reordering, rewriter, baseDirectory, Transformation::FPReordering, Phase::Analysis));
-    auto candidates = reordering.candidates;
+    std::vector<FunctionUnique> candidates;
+    for (const auto& it : reordering.candidates) {
+        if (it.second.valid)
+        {
+            llvm::outs() << "Valid candidate: " << it.first.getName() << "\n";
+            candidates.push_back(it.first);
+        }
+    }
 
     // We need to determine the maximum amount of reorderings that is actually
     // possible with the given input source files (based on the analysis phase).
     std::map<int, int> histogram;
     long totalReorderings = 0;
     double averageParameters = 0;
-    for (const auto candidate : candidates) {
-        unsigned nrParams = candidate.params.size();
+    for (const auto& candidate : candidates) {
+        unsigned nrParams = reordering.candidates[candidate].params.size();
 
         // We increase the total possible reorderings, based on
         // the factorial of the number of fields.
@@ -156,15 +185,14 @@ void fpreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory
     while (amountChosen < amount)
     {
         // We choose a candidate at random.
-        FunctionData& chosen = candidates[random_0_to_n(candidates.size())];
-        FunctionUnique& chosenFunction = chosen.function;
-        std::vector<FunctionParam>& params = chosen.params;
+        FunctionUnique& chosen = candidates[random_0_to_n(candidates.size())];
+        std::vector<FunctionParam>& params = reordering.candidates[chosen].params;
 
         // Things we should write to an output file.
         Json::Value output;
         output["type"] = "function_parameter_reordering";
-        output["file_function_name"] = chosenFunction.getName();
-        output["file_name"] = chosenFunction.getFileName();
+        output["file_function_name"] = chosen.getName();
+        output["file_name"] = chosen.getFileName();
 
         // We determine a random ordering of fields.
         Json::Value original(Json::arrayValue);
@@ -189,7 +217,7 @@ void fpreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory
         // Check if this transformation isn't duplicate. If it is, we try again
         bool found = false;
         for (auto& t : transformations) {
-            if (t.function == chosenFunction && t.ordering == ordering) {
+            if (t.function == chosen && t.ordering == ordering) {
                 found = true;
                 break;
             }
@@ -198,7 +226,7 @@ void fpreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory
             continue;
 
         // Debug information.
-        llvm::outs() << "Chosen Function: " << chosenFunction.getName() << "\n";
+        llvm::outs() << "Chosen Function: " << chosen.getName() << "\n";
         llvm::outs() << "Chosen ordering: " << "\n";
         for (auto it : ordering) {
             llvm::outs() << it << " ";
@@ -225,7 +253,7 @@ void fpreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory
         writeJSONToFile(outputPrefix, amountChosen+1, "transformations.json", output);
 
         // Add the transformation
-        transformations.emplace_back(chosenFunction, ordering);
+        transformations.emplace_back(chosen, ordering);
         amountChosen++;
     }
 
