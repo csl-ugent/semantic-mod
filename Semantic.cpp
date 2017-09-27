@@ -25,15 +25,15 @@ FrontendAction* SemanticFrontendActionFactory::create() {
 }
 
 // Semantic frontend action: action that will start the consumer.
-ASTConsumer* SemanticFrontendAction::CreateASTConsumer(CompilerInstance &CI, StringRef file) {
+std::unique_ptr<ASTConsumer> SemanticFrontendAction::CreateASTConsumer(CompilerInstance &CI, StringRef file) {
 
     // We create a new AST consumer based on the type of transformation.
     if (this->transType == Transformation::StructReordering) {
-        return new StructReorderingASTConsumer(&CI, reordering, this->rewriter, this->baseDirectory, this->phaseType);
+        return llvm::make_unique<StructReorderingASTConsumer>(&CI, reordering, this->rewriter, this->baseDirectory, this->phaseType);
     } else if (this->transType == Transformation::FPReordering) {
-        return new FPReorderingASTConsumer(&CI, reordering, this->rewriter, this->baseDirectory, this->phaseType);
+        return llvm::make_unique<FPReorderingASTConsumer>(&CI, reordering, this->rewriter, this->baseDirectory, this->phaseType);
     } else if (this->transType == Transformation::SWCReordering) {
-        return new SWCReorderingASTConsumer(&CI, reordering, this->rewriter, this->baseDirectory, this->phaseType);
+        return llvm::make_unique<SWCReorderingASTConsumer>(&CI, reordering, this->rewriter, this->baseDirectory, this->phaseType);
     }
 }
 

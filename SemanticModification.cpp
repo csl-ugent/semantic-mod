@@ -64,18 +64,19 @@ static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 // A help message for this specific tool can be added afterwards.
 static cl::extrahelp MoreHelp("\nMore help text...\n");
 
-// Extra output option.
-static cl::opt<std::string> OutputDirectory("od");
-static cl::opt<std::string> BaseDirectory("bd");
-static cl::opt<unsigned> NumberOfVersions("nr_of_versions");
-static cl::opt<std::string> TransformationType("transtype");
-static cl::opt<unsigned> Seed("seed", cl::init((unsigned)0), cl::desc("The seed for the PRNG."));
+// Options for semantic-mod
+static cl::OptionCategory MainCategory("semantic-mod options");
+static cl::opt<std::string> OutputDirectory("od", cl::cat(MainCategory));
+static cl::opt<std::string> BaseDirectory("bd", cl::cat(MainCategory));
+static cl::opt<unsigned> NumberOfVersions("nr_of_versions", cl::cat(MainCategory));
+static cl::opt<std::string> TransformationType("transtype", cl::cat(MainCategory));
+static cl::opt<unsigned> Seed("seed", cl::init((unsigned)0), cl::desc("The seed for the PRNG."), cl::cat(MainCategory));
 
 // Entry point of our tool.
 int main(int argc, const char **argv) {
 
     // Default options parser.
-    CommonOptionsParser OptionsParser(argc, argv);
+    CommonOptionsParser OptionsParser(argc, argv, MainCategory);
 
     // If the BaseDirectory path doesn't have a trailing slash, add one
     if (*BaseDirectory.rbegin() != '/')

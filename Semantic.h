@@ -123,7 +123,7 @@ public:
       phaseType(phaseType)
     {}
 
-    clang::ASTConsumer *CreateASTConsumer(clang::CompilerInstance &CI, llvm::StringRef file);
+    std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(clang::CompilerInstance &CI, llvm::StringRef file);
     void EndSourceFileAction();
     void writeChangesToOutput();
 };
