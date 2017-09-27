@@ -9,10 +9,11 @@ using namespace clang;
 using namespace llvm;
 
 // Obtain source information corresponding to a statement.
-std::string location2str(SourceLocation begin, SourceLocation end, SourceManager* sm, const LangOptions* lopt) {
-    end = clang::Lexer::getLocForEndOfToken(end, 0, *sm, *lopt);
-    const char* Start = sm->getCharacterData(begin);
-    const char* End = sm->getCharacterData(end);
+std::string location2str(const SourceRange& range, const ASTContext& astContext) {
+    const SourceManager& sm = astContext.getSourceManager();
+    SourceLocation end = clang::Lexer::getLocForEndOfToken(range.getEnd(), 0, sm, astContext.getLangOpts());
+    const char* Start = sm.getCharacterData(range.getBegin());
+    const char* End = sm.getCharacterData(end);
     return std::string(Start, End - Start);
 }
 

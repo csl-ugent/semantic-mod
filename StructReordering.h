@@ -28,14 +28,14 @@ void structReordering(clang::Rewriter* rewriter, clang::tooling::ClangTool* Tool
 // Semantic analyser, willl analyse different nodes within the AST.
 class StructReorderingAnalyser : public clang::RecursiveASTVisitor<StructReorderingAnalyser> {
 private:
-    clang::ASTContext *astContext; // Used for getting additional AST info.
+    clang::ASTContext& astContext; // Used for getting additional AST info.
     StructReordering& reordering;
     std::string baseDirectory;
 public:
     explicit StructReorderingAnalyser(clang::CompilerInstance *CI,
                               StructReordering& reordering,
                               std::string baseDirectory)
-      : astContext(&(CI->getASTContext())),
+      : astContext(CI->getASTContext()),
         reordering(reordering), // Initialize private members.
         baseDirectory(baseDirectory)
     { }
@@ -48,12 +48,12 @@ public:
 // Semantic post transformation analyser.
 class StructReorderingPreTransformationAnalysis : public clang::RecursiveASTVisitor<StructReorderingPreTransformationAnalysis> {
 private:
-    clang::ASTContext *astContext; // Used for getting additional AST info.
+    clang::ASTContext& astContext; // Used for getting additional AST info.
     StructReordering& reordering;
 public:
     explicit StructReorderingPreTransformationAnalysis(clang::CompilerInstance *CI,
                                                     StructReordering& reordering)
-      : astContext(&(CI->getASTContext())),
+      : astContext(CI->getASTContext()),
         reordering(reordering)
     { }
 
@@ -71,18 +71,18 @@ public:
 // Semantic Rewriter, will rewrite source code based on the AST.
 class StructReorderingRewriter : public clang::RecursiveASTVisitor<StructReorderingRewriter> {
 private:
-    clang::ASTContext *astContext; // Used for getting additional AST info.
+    clang::ASTContext& astContext; // Used for getting additional AST info.
     StructReordering& reordering;
     clang::Rewriter* rewriter;
 public:
     explicit StructReorderingRewriter(clang::CompilerInstance *CI,
                               StructReordering& reordering,
                               clang::Rewriter* rewriter)
-      : astContext(&(CI->getASTContext())),
+      : astContext(CI->getASTContext()),
         reordering(reordering),
         rewriter(rewriter) // Initialize private members.
     {
-        rewriter->setSourceMgr(astContext->getSourceManager(), astContext->getLangOpts());
+        rewriter->setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
     }
 
     // We want to investigate top-level things.

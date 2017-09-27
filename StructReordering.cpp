@@ -29,7 +29,7 @@ bool StructReorderingAnalyser::VisitTranslationUnitDecl(clang::TranslationUnitDe
         if (TypedefDecl* D = dyn_cast<TypedefDecl>(decl)) {
 
             // We create new structData information.
-            StringRef fileNameRef = astContext->getSourceManager().getFilename(
+            StringRef fileNameRef = astContext.getSourceManager().getFilename(
                 D->getLocation());
 
             std::string fileNameStr;
@@ -115,7 +115,7 @@ bool StructReorderingAnalyser::VisitTranslationUnitDecl(clang::TranslationUnitDe
 
                                 // We check if the Decl is a RecordDecl.
                                 if (RecordDecl* innerD = dyn_cast<RecordDecl>(innerDecl)) {
-                                    std::string recordText = location2str(innerD->getLocStart(), innerD->getLocEnd(), &astContext->getSourceManager(), &astContext->getLangOpts());
+                                    std::string recordText = location2str(innerD->getSourceRange(), astContext);
                                     structData->addFieldDefinition(recordText);
                                 }
                             }
@@ -148,7 +148,7 @@ bool StructReorderingAnalyser::VisitTranslationUnitDecl(clang::TranslationUnitDe
                 }
 
                 // We create new structData information.
-                StringRef fileNameRef = astContext->getSourceManager().getFilename(
+                StringRef fileNameRef = astContext.getSourceManager().getFilename(
                     D->getLocation());
 
                 std::string fileNameStr;
@@ -206,7 +206,7 @@ bool StructReorderingAnalyser::VisitTranslationUnitDecl(clang::TranslationUnitDe
 
                         // We check if the Decl is a RecordDecl.
                         if (RecordDecl* innerD = dyn_cast<RecordDecl>(innerDecl)) {
-                            std::string recordText = location2str(innerD->getLocStart(), innerD->getLocEnd(), &astContext->getSourceManager(), &astContext->getLangOpts());
+                            std::string recordText = location2str(innerD->getSourceRange(), astContext);
                             structData->addFieldDefinition(recordText);
                         }
                     }
@@ -419,18 +419,18 @@ bool StructReorderingRewriter::VisitTranslationUnitDecl(clang::TranslationUnitDe
                                     substitute = fieldData[i];
 
                                     // We update the replacement string.
-                                    std::string fieldText = location2str(substitute.sourceRange.getBegin(), substitute.sourceRange.getEnd(), &astContext->getSourceManager(), &astContext->getLangOpts());
+                                    std::string fieldText = location2str(substitute.sourceRange, astContext);
                                     replacement << fieldText;
                                     if (i != fieldData.size() - 1) {
                                         replacement << ";";
                                     }
 
                                     // We check upper/lowerbounds on declarations.
-                                    if (astContext->getSourceManager().getFileLoc(lowerBound.getBegin()).getRawEncoding() > astContext->getSourceManager().getFileLoc(substitute.sourceRange.getBegin()).getRawEncoding()) {
+                                    if (astContext.getSourceManager().getFileLoc(lowerBound.getBegin()).getRawEncoding() > astContext.getSourceManager().getFileLoc(substitute.sourceRange.getBegin()).getRawEncoding()) {
                                         lowerBound = substitute.sourceRange;
                                     }
 
-                                    if (astContext->getSourceManager().getFileLoc(upperBound.getEnd()).getRawEncoding() < astContext->getSourceManager().getFileLoc(substitute.sourceRange.getEnd()).getRawEncoding()) {
+                                    if (astContext.getSourceManager().getFileLoc(upperBound.getEnd()).getRawEncoding() < astContext.getSourceManager().getFileLoc(substitute.sourceRange.getEnd()).getRawEncoding()) {
                                         upperBound = substitute.sourceRange;
                                     }
                                 }
@@ -501,18 +501,18 @@ bool StructReorderingRewriter::VisitTranslationUnitDecl(clang::TranslationUnitDe
                             substitute = fieldData[i];
 
                             // We update the replacement string.
-                            std::string fieldText = location2str(substitute.sourceRange.getBegin(), substitute.sourceRange.getEnd(), &astContext->getSourceManager(), &astContext->getLangOpts());
+                            std::string fieldText = location2str(substitute.sourceRange, astContext);
                             replacement << fieldText;
                             if (i != fieldData.size() - 1) {
                                 replacement << ";";
                             }
 
                             // We check upper/lowerbounds on declarations.
-                            if (astContext->getSourceManager().getFileLoc(lowerBound.getBegin()).getRawEncoding() > astContext->getSourceManager().getFileLoc(substitute.sourceRange.getBegin()).getRawEncoding()) {
+                            if (astContext.getSourceManager().getFileLoc(lowerBound.getBegin()).getRawEncoding() > astContext.getSourceManager().getFileLoc(substitute.sourceRange.getBegin()).getRawEncoding()) {
                                 lowerBound = substitute.sourceRange;
                             }
 
-                            if (astContext->getSourceManager().getFileLoc(upperBound.getEnd()).getRawEncoding() < astContext->getSourceManager().getFileLoc(substitute.sourceRange.getEnd()).getRawEncoding()) {
+                            if (astContext.getSourceManager().getFileLoc(upperBound.getEnd()).getRawEncoding() < astContext.getSourceManager().getFileLoc(substitute.sourceRange.getEnd()).getRawEncoding()) {
                                 upperBound = substitute.sourceRange;
                             }
                         }

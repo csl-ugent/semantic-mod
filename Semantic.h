@@ -39,12 +39,12 @@ namespace Phase {
 // Default version of the pre-transformation analyser, for those reordering's that don't have any
 class DefaultPreTransformationAnalysis : public clang::RecursiveASTVisitor<DefaultPreTransformationAnalysis> {
 private:
-    clang::ASTContext *astContext; // Used for getting additional AST info.
+    clang::ASTContext& astContext; // Used for getting additional AST info.
     Reordering& reordering;
 public:
     explicit DefaultPreTransformationAnalysis(clang::CompilerInstance *CI,
                                                     Reordering& reordering)
-      : astContext(&(CI->getASTContext())),
+      : astContext(CI->getASTContext()),
         reordering(reordering)
     { }
 };
@@ -100,7 +100,7 @@ public:
 };
 
 // General utility functions.
-std::string location2str(clang::SourceLocation begin, clang::SourceLocation end, clang::SourceManager* sm, const clang::LangOptions* lopt);
+std::string location2str(const clang::SourceRange& range, const clang::ASTContext& astContext);
 
 // Semantic analyser frontend action: action that will start the consumer.
 class SemanticFrontendAction : public clang::ASTFrontendAction {
