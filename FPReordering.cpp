@@ -142,13 +142,6 @@ bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
             std::string name = newParam->getNameAsString();
             std::string type = newParam->getType().getAsString();
             std::string substitute = type + " " + name;
-            if (newParam->getNameAsString().empty()) { // It is possible to define a function without parameter argument names...
-                // In this case the sourcerange covers the field separator and closing parenthesis as well
-                if (iii != FD->getNumParams() -1)
-                    substitute += ",";
-                else
-                    substitute += ")";
-            }
 
             // We replace the field with the new field information.
             this->rewriter->ReplaceText(oldParam->getSourceRange(), substitute);
