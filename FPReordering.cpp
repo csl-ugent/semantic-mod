@@ -12,6 +12,32 @@ using namespace clang;
 using namespace llvm;
 using namespace clang::tooling;
 
+// We use this visitor to check for function pointers. If a pointer to a function is assigned, we invalidate the function
+bool FPReorderingAnalyser::VisitBinaryOperator(clang::BinaryOperator* BE) {
+    if (BE->isAssignmentOp())
+    {
+        // Check if the RHS is a DeclRefExpr
+        const Expr* rhs = BE->getRHS();
+        const Expr* sub = rhs->IgnoreParenCasts();
+        const clang::DeclRefExpr* DRE = dyn_cast<DeclRefExpr>(sub);
+        if (DRE) {
+            // If it is, check if it refers to a function
+            const clang::FunctionDecl* FD = dyn_cast<FunctionDecl>(DRE->getFoundDecl());
+            if (FD) {
+                const FunctionUnique function(FD, astContext);
+                const std::string& fileName = function.getFileName();
+
+                // We make sure the file is contained in our base directory...
+                if (fileName.find(this->baseDirectory) == std::string::npos)
+                    return true;
+
+                reordering.invalidateFunction(function, "function is assigned as a pointer");
+            }
+        }
+    }
+    return true;
+}
+
 bool FPReorderingAnalyser::VisitCallExpr(clang::CallExpr* CE) {
     FunctionDecl* FD = CE->getDirectCallee();
     if (FD) {

@@ -119,6 +119,7 @@ public:
     { }
 
     // We want to investigate Function declarations and invocations
+    bool VisitBinaryOperator(clang::BinaryOperator* DRE);
     bool VisitCallExpr(clang::CallExpr* CE);
     bool VisitFunctionDecl(clang::FunctionDecl* FD);
 };
