@@ -49,8 +49,14 @@ bool FPReorderingRewriter::VisitCallExpr(clang::CallExpr* CE) {
             auto ordering = transformation->ordering;
             for (unsigned iii = 0; iii < CE->getNumArgs(); iii++)
             {
+                const SourceRange& oldRange = CE->getArg(iii)->getSourceRange();
+                const SourceRange& newRange = CE->getArg(ordering[iii])->getSourceRange();
+                const SourceRange oldRangeExpanded(astContext.getSourceManager().getExpansionRange(oldRange.getBegin()).first, astContext.getSourceManager().getExpansionRange(oldRange.getEnd()).second);
+                const SourceRange newRangeExpanded(astContext.getSourceManager().getExpansionRange(newRange.getBegin()).first, astContext.getSourceManager().getExpansionRange(newRange.getEnd()).second);
+
                 // We replace the field arg with another argument based on the reordering information.
-                this->rewriter->ReplaceStmt(CE->getArg(iii), CE->getArg(ordering[iii]));
+                const std::string substitute = location2str(newRangeExpanded, astContext);
+                this->rewriter->ReplaceText(oldRangeExpanded, substitute);
             }
         }
     }
