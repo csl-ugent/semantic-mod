@@ -1,9 +1,6 @@
 #ifndef _FPREORDERING
 #define _FPREORDERING
 
-#include <string>
-#include <cstdlib>
-
 #include "Semantic.h"
 #include "SemanticData.h"
 
@@ -11,11 +8,13 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/Rewriters.h"
+#include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/MapVector.h"
+
+#include <cstdlib>
+#include <string>
 
 // Declaration of used methods.
 void fpreordering(clang::Rewriter* rewriter, clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);

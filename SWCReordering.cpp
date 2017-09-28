@@ -1,14 +1,13 @@
 #include "SWCReordering.h"
-#include "json.h"
 #include "SemanticUtil.h"
 
-#include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/Rewrite/Frontend/Rewriters.h"
 #include "clang/Tooling/Tooling.h"
 
+#include "json.h"
+
 using namespace clang;
-using namespace llvm;
 using namespace clang::tooling;
+using namespace llvm;
 
 // AST visitor, used for analysis.
 bool SWCReorderingAnalyser::VisitSwitchStmt(clang::SwitchStmt* CS) {

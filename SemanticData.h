@@ -1,12 +1,11 @@
 #ifndef _SEMANTICDATA
 #define _SEMANTICDATA
 
+#include "clang/Basic/SourceManager.h"
+
 #include <map>
 #include <set>
 #include <string>
-
-#include "clang/AST/Decl.h"
-#include "clang/Basic/SourceManager.h"
 
 // Data of fields appearing within a structure.
 typedef struct fieldData_ {

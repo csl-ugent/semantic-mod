@@ -1,26 +1,18 @@
 #ifndef _STRUCTREORDERING
 #define _STRUCTREORDERING
 
-#include <string>
-#include <sstream>
-#include <cstdlib>
-#include <sstream>
-#include <fstream>
-
 #include "Semantic.h"
 #include "SemanticData.h"
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/Rewriters.h"
-#include "clang/Lex/Lexer.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/LangOptions.h"
+#include "clang/Tooling/Tooling.h"
+
+#include <string>
 
 // Declaration of used methods.
 void structReordering(clang::Rewriter* rewriter, clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);

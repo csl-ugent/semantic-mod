@@ -1,12 +1,6 @@
 #ifndef _SEMANTIC
 #define _SEMANTIC
 
-#include <string>
-#include <sstream>
-#include <cstdlib>
-#include <sstream>
-#include <fstream>
-
 #include "SemanticData.h"
 
 #include "clang/AST/AST.h"
@@ -18,9 +12,9 @@
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/Rewriters.h"
-#include "clang/Lex/Lexer.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Basic/LangOptions.h"
+
+#include <string>
 
 // Enumeration of types of transformations.
 namespace Transformation {

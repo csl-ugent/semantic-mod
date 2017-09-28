@@ -1,14 +1,17 @@
 #include "StructReordering.h"
-#include "json.h"
 #include "SemanticUtil.h"
 
-#include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/Rewrite/Frontend/Rewriters.h"
 #include "clang/Tooling/Tooling.h"
 
+#include "json.h"
+
+#include <sstream>
+#include <string>
+#include <vector>
+
 using namespace clang;
-using namespace llvm;
 using namespace clang::tooling;
+using namespace llvm;
 
 // Struct which applies the structure reordering.
 typedef struct structOrdering_ {

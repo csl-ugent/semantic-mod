@@ -1,13 +1,12 @@
 #include "SemanticUtil.h"
-#include <stdlib.h> // rand
-#include <sstream>
-#include <fstream>
-#include <string>
-#include <math.h>
 
-#include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/Rewrite/Frontend/Rewriters.h"
-#include "clang/Tooling/Tooling.h"
+#include "llvm/Support/raw_ostream.h"
+
+#include <cmath>
+#include <cstdlib> // rand
+#include <fstream>
+#include <sstream>
+#include <string>
 
 using namespace llvm;
 

@@ -1,60 +1,22 @@
-#include <cstdio>
-#include <memory>
-#include <string>
-#include <sstream>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <stdio.h>
-#include <vector>
-#include <fstream>
-#include <iostream>
-#include <set>
-#include <algorithm>
-#include <cstdlib>
-#include <sstream>
-
-#include "json.h"
+#include "FPReordering.h"
 #include "Semantic.h"
+#include "SemanticUtil.h"
 #include "StructReordering.h"
 #include "SWCReordering.h"
-#include "FPReordering.h"
-#include "SemanticUtil.h"
 
-// Declares clang::SyntaxOnlyAction.
-#include "clang/Frontend/FrontendActions.h"
-#include "clang/Tooling/CommonOptionsParser.h"
-#include "clang/Tooling/Tooling.h"
-// Declares llvm::cl::extrahelp.
-#include "llvm/Support/CommandLine.h"
-// Matcher imports.
-#include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
-// ASTContext.
-#include "clang/AST/ASTContext.h"
-#include "clang/ASTMatchers/ASTMatchersMacros.h"
-#include "clang/AST/AST.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
-// Rewriter
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/Rewriters.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TargetOptions.h"
-#include "clang/Basic/TargetInfo.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Lex/Preprocessor.h"
-#include "clang/Lex/Lexer.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/raw_ostream.h"
+#include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
 
+#include <string>
+#include <vector>
+
+using namespace clang;
 using namespace clang::tooling;
 using namespace llvm;
-using namespace clang;
-using namespace clang::ast_matchers;
 
 // CommonOptionsParser declares HelpMessage with a description of the common
 // command-line options related to the compilation database and input files.

@@ -1,16 +1,16 @@
 #include "FPReordering.h"
-#include "json.h"
 #include "SemanticUtil.h"
+
+#include "clang/Tooling/Tooling.h"
+
+#include "json.h"
+
 #include <sstream>
 #include <string>
 
-#include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/Rewrite/Frontend/Rewriters.h"
-#include "clang/Tooling/Tooling.h"
-
 using namespace clang;
-using namespace llvm;
 using namespace clang::tooling;
+using namespace llvm;
 
 // We use this visitor to check for function pointers. If a pointer to a function is assigned, we invalidate the function
 bool FPReorderingAnalyser::VisitBinaryOperator(clang::BinaryOperator* BE) {

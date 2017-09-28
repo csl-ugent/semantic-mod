@@ -1,9 +1,13 @@
 #include "Semantic.h"
+#include "FPReordering.h"
 #include "StructReordering.h"
 #include "SWCReordering.h"
-#include "FPReordering.h"
 
 #include "clang/Lex/Lexer.h"
+
+#include <fstream>
+#include <sstream>
+#include <string>
 
 using namespace clang;
 using namespace llvm;
