@@ -26,25 +26,12 @@ namespace Transformation {
 // Phases of an ASTConsumer.
 namespace Phase {
     enum Type {
-        Analysis, PreTransformationAnalysis, Rewrite
+        Analysis, Rewrite
     };
 }
 
-// Default version of the pre-transformation analyser, for those reordering's that don't have any
-class DefaultPreTransformationAnalysis : public clang::RecursiveASTVisitor<DefaultPreTransformationAnalysis> {
-private:
-    clang::ASTContext& astContext; // Used for getting additional AST info.
-    Reordering& reordering;
-public:
-    explicit DefaultPreTransformationAnalysis(clang::CompilerInstance *CI,
-                                                    Reordering& reordering)
-      : astContext(CI->getASTContext()),
-        reordering(reordering)
-    { }
-};
-
 // Reordering ASTConsumer
-template <typename ReorderingType, typename AnalyserType,  typename RewriterType, typename PreTransformationAnalyserType = DefaultPreTransformationAnalysis>
+template <typename ReorderingType, typename AnalyserType,  typename RewriterType>
 class ReorderingASTConsumer : public clang::ASTConsumer {
 private:
     ReorderingType& reordering;
@@ -74,12 +61,6 @@ public:
             case Phase::Analysis:
                 {
                     AnalyserType visitor = AnalyserType(this->CI, reordering, baseDirectory);
-                    visitor.TraverseDecl(Context.getTranslationUnitDecl());
-                    break;
-                }
-            case Phase::PreTransformationAnalysis:
-                {
-                    PreTransformationAnalyserType visitor = PreTransformationAnalyserType(this->CI, reordering);
                     visitor.TraverseDecl(Context.getTranslationUnitDecl());
                     break;
                 }
