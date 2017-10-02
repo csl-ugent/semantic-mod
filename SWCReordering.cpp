@@ -44,12 +44,9 @@ bool SWCReorderingRewriter::VisitSwitchStmt(clang::SwitchStmt* CS) {
 
 // Method used for the switch case reordering semantic transformation.
 void swcreordering(ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings) {
-    // Debug information.
-    llvm::outs() << "Phase 1: Switch Case Analysis\n";
-
     // We run the analysis phase.
     SWCReordering reordering(baseDirectory);
-    Tool->run(new SemanticFrontendActionFactory(reordering, Transformation::SWCReordering, Phase::Analysis));
+    Tool->run(new AnalysisFrontendActionFactory<SWCReordering, SWCReorderingAnalyser>(reordering));
 
     // We determine the amount of reorderings we are going to make.
     //int amount = amountOfReorderings;
@@ -57,5 +54,5 @@ void swcreordering(ClangTool* Tool, std::string baseDirectory, std::string outpu
     // In case we have at least one switch case we should be able
     // to infinite values to XOR with.
 
-    Tool->run(new SemanticFrontendActionFactory(reordering, Transformation::SWCReordering, Phase::Rewrite));
+    Tool->run(new RewritingFrontendActionFactory<SWCReordering, SWCReorderingRewriter>(reordering, 0, ""));
 }

@@ -153,12 +153,9 @@ bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
 
 // Method used for the function parameter semantic transformation.
 void fpreordering(ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings) {
-    // Debug information.
-    llvm::outs() << "Phase 1: Function Analysis\n";
-
     // We run the analysis phase and get the valid candidates
     FPReordering reordering(baseDirectory);
-    Tool->run(new SemanticFrontendActionFactory(reordering, Transformation::FPReordering, Phase::Analysis));
+    Tool->run(new AnalysisFrontendActionFactory<FPReordering, FPReorderingAnalyser>(reordering));
     std::vector<FunctionUnique> candidates;
     for (const auto& it : reordering.candidates) {
         if (it.second.valid)
@@ -296,7 +293,6 @@ void fpreordering(ClangTool* Tool, std::string baseDirectory, std::string output
         FPTransformation* transformation = &transformations[iii];
         reordering.transformation = transformation;
 
-        llvm::outs() << "Phase 2: performing rewrite for version: " << iii + 1 << " target name: " << transformation->target.getName() << "\n";
-        Tool->run(new SemanticFrontendActionFactory(reordering, Transformation::FPReordering, Phase::Rewrite, iii + 1, outputPrefix));
+        Tool->run(new RewritingFrontendActionFactory<FPReordering, FPReorderingRewriter>(reordering, iii + 1, outputPrefix));
     }
 }

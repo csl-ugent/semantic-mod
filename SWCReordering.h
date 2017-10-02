@@ -87,8 +87,8 @@ private:
     clang::ASTContext& astContext; // Used for getting additional AST info.
     SWCReordering& reordering;
 public:
-    explicit SWCReorderingAnalyser(clang::CompilerInstance *CI, SWCReordering& reordering)
-      : astContext(CI->getASTContext()), reordering(reordering) { }
+    explicit SWCReorderingAnalyser(clang::ASTContext& Context, SWCReordering& reordering)
+      : astContext(Context), reordering(reordering) { }
 
     // We want to investigate switch statements.
     bool VisitSwitchStmt(clang::SwitchStmt* CS);
@@ -101,12 +101,8 @@ private:
     SWCReordering& reordering;
     clang::Rewriter& rewriter;
 public:
-    explicit SWCReorderingRewriter(clang::CompilerInstance *CI,
-                                   SWCReordering& reordering,
-                                   clang::Rewriter& rewriter)
-      : astContext(CI->getASTContext()),
-        reordering(reordering),
-        rewriter(rewriter) // Initialize private members.
+    explicit SWCReorderingRewriter(clang::ASTContext& Context, SWCReordering& reordering, clang::Rewriter& rewriter)
+      : astContext(Context), reordering(reordering), rewriter(rewriter)
     {
         rewriter.setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
     }
@@ -114,8 +110,5 @@ public:
     // We want to rewrite switch statements.
     bool VisitSwitchStmt(clang::SwitchStmt* CS);
 };
-
-// AST Consumer
-typedef ReorderingASTConsumer<SWCReordering, SWCReorderingAnalyser, SWCReorderingRewriter> SWCReorderingASTConsumer;
 
 #endif

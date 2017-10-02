@@ -110,8 +110,8 @@ private:
     clang::ASTContext& astContext; // Used for getting additional AST info.
     FPReordering& reordering;
 public:
-    explicit FPReorderingAnalyser(clang::CompilerInstance *CI, FPReordering& reordering)
-      : astContext(CI->getASTContext()), reordering(reordering) { }
+    explicit FPReorderingAnalyser(clang::ASTContext& Context, FPReordering& reordering)
+      : astContext(Context), reordering(reordering) { }
 
     // We want to investigate Function declarations and invocations
     bool VisitBinaryOperator(clang::BinaryOperator* DRE);
@@ -126,12 +126,8 @@ private:
     FPReordering& reordering;
     clang::Rewriter& rewriter;
 public:
-    explicit FPReorderingRewriter(clang::CompilerInstance *CI,
-                                  FPReordering& reordering,
-                                  clang::Rewriter& rewriter)
-      : astContext(CI->getASTContext()),
-        reordering(reordering),
-        rewriter(rewriter) // Initialize private members.
+    explicit FPReorderingRewriter(clang::ASTContext& Context, FPReordering& reordering, clang::Rewriter& rewriter)
+      : astContext(Context), reordering(reordering), rewriter(rewriter)
     {
         rewriter.setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
     }
@@ -142,8 +138,5 @@ public:
     // We want to investigate FunctionDecl's.
     bool VisitFunctionDecl(clang::FunctionDecl* D);
 };
-
-// AST Consumer
-typedef ReorderingASTConsumer<FPReordering, FPReorderingAnalyser, FPReorderingRewriter> FPReorderingASTConsumer;
 
 #endif

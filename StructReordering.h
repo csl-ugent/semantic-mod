@@ -113,8 +113,8 @@ private:
     clang::ASTContext& astContext; // Used for getting additional AST info.
     StructReordering& reordering;
 public:
-    explicit StructReorderingAnalyser(clang::CompilerInstance *CI, StructReordering& reordering)
-      : astContext(CI->getASTContext()), reordering(reordering) { }
+    explicit StructReorderingAnalyser(clang::ASTContext& Context, StructReordering& reordering)
+      : astContext(Context), reordering(reordering) { }
 
     // We want to investigate all possible struct declarations and uses
     void detectStructsRecursively(const clang::Type* origType);
@@ -129,12 +129,8 @@ private:
     StructReordering& reordering;
     clang::Rewriter& rewriter;
 public:
-    explicit StructReorderingRewriter(clang::CompilerInstance *CI,
-                              StructReordering& reordering,
-                              clang::Rewriter& rewriter)
-      : astContext(CI->getASTContext()),
-        reordering(reordering),
-        rewriter(rewriter) // Initialize private members.
+    explicit StructReorderingRewriter(clang::ASTContext& Context, StructReordering& reordering, clang::Rewriter& rewriter)
+      : astContext(Context), reordering(reordering), rewriter(rewriter)
     {
         rewriter.setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
     }
@@ -142,8 +138,5 @@ public:
     // We want to investigate top-level things.
     bool VisitRecordDecl(clang::RecordDecl* D);
 };
-
-// AST Consumer
-typedef ReorderingASTConsumer<StructReordering, StructReorderingAnalyser, StructReorderingRewriter> StructReorderingASTConsumer;
 
 #endif

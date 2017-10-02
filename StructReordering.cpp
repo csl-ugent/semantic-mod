@@ -132,12 +132,9 @@ bool StructReorderingRewriter::VisitRecordDecl(clang::RecordDecl* D) {
 
 // Method used for the structreordering semantic transformation.
 void structReordering(ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings) {
-    // Debug information.
-    llvm::outs() << "Phase 1: Struct analysis\n";
-
     // We run the analysis phase.
     StructReordering reordering(baseDirectory);
-    Tool->run(new SemanticFrontendActionFactory(reordering, Transformation::StructReordering, Phase::Analysis));
+    Tool->run(new AnalysisFrontendActionFactory<StructReordering, StructReorderingAnalyser>(reordering));
     std::vector<StructUnique> candidates;
     for (const auto& it : reordering.candidates) {
         if (it.second.valid)
@@ -261,7 +258,6 @@ void structReordering(ClangTool* Tool, std::string baseDirectory, std::string ou
         StructTransformation* transformation = &transformations[iii];
         reordering.transformation = transformation;
 
-        llvm::outs() << "Phase 2: performing rewrite for version: " << iii + 1 << " target name: " << transformation->target.getName() << "\n";
-        Tool->run(new SemanticFrontendActionFactory(reordering, Transformation::StructReordering, Phase::Rewrite, iii + 1, outputPrefix));
+        Tool->run(new RewritingFrontendActionFactory<StructReordering, StructReorderingRewriter>(reordering, iii + 1, outputPrefix));
     }
 }

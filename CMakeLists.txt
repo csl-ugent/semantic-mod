@@ -3,7 +3,6 @@ set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 
 add_clang_executable(semantic-mod
   SemanticModification.cpp
-  Semantic.cpp
   FPReordering.cpp
   StructReordering.cpp
   SWCReordering.cpp
