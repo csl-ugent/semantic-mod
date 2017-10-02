@@ -19,21 +19,14 @@
 // Declaration of used methods.
 void fpreordering(clang::Rewriter* rewriter, clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);
 
-struct FunctionParam {
-        std::string name;
-        std::string type;
-
-        FunctionParam(std::string name, std::string type) : name(name), type(type) {}
-};
-
 class FunctionUnique {
         std::string name;
         std::string fileName;
         bool global;
 
     public:
-        FunctionUnique(const clang::FunctionDecl* FD, const clang::ASTContext& astContext)
-            : name(FD->getNameAsString()), fileName(astContext.getSourceManager().getFilename(FD->getLocation()).str()), global(FD->isGlobal()) {}
+        FunctionUnique(const clang::FunctionDecl* D, const clang::ASTContext& astContext)
+            : name(D->getNameAsString()), fileName(astContext.getSourceManager().getFilename(D->getLocation()).str()), global(D->isGlobal()) {}
         std::string getName() const { return name;}
         std::string getFileName() const { return fileName;}
         bool operator== (const FunctionUnique& function) const
@@ -62,27 +55,34 @@ class FunctionUnique {
         }
 };
 
+struct FunctionParam {
+        std::string name;
+        std::string type;
+
+        FunctionParam(std::string name, std::string type) : name(name), type(type) {}
+};
+
 class FunctionData {
     public:
         bool valid;
         std::vector<FunctionParam> params;
 
         FunctionData(bool valid = true) : valid(valid) {}
-        void addParams(clang::FunctionDecl* FD)
+        void addParams(clang::FunctionDecl* D)
         {
-            for (unsigned iii = 0; iii < FD->getNumParams(); iii++) {
-                const clang::ParmVarDecl* param = FD->getParamDecl(iii);
+            for (unsigned iii = 0; iii < D->getNumParams(); iii++) {
+                const clang::ParmVarDecl* param = D->getParamDecl(iii);
                 params.emplace_back(param->getNameAsString(), param->getType().getAsString());
             }
         }
 };
 
-// Struct which applies the function reordering.
+// Struct which describes the transformation
 struct FPTransformation {
-    FunctionUnique function;
+    FunctionUnique target;
     std::vector<unsigned> ordering;
-    FPTransformation(FunctionUnique function, std::vector<unsigned>& ordering)
-        : function(function), ordering(ordering) {}
+    FPTransformation(FunctionUnique target, std::vector<unsigned>& ordering)
+        : target(target), ordering(ordering) {}
 };
 
 // Function parameter reordering semantic modification.
@@ -92,9 +92,9 @@ public:
 
     // Map containing all information regarding different functions.
     llvm::MapVector<FunctionUnique, FunctionData, std::map<FunctionUnique, unsigned>> candidates;
-    void invalidateFunction(const FunctionUnique& FU, const std::string& reason) {
-        llvm::outs() << "Invalidate function: " << FU.getName() << ". Reason: " << reason << ".\n";
-        FunctionData& data = candidates[FU];
+    void invalidateCandidate(const FunctionUnique& candidate, const std::string& reason) {
+        llvm::outs() << "Invalidate candidate: " << candidate.getName() << ". Reason: " << reason << ".\n";
+        FunctionData& data = candidates[candidate];
         data.valid = false;
     }
 
@@ -120,7 +120,7 @@ public:
     // We want to investigate Function declarations and invocations
     bool VisitBinaryOperator(clang::BinaryOperator* DRE);
     bool VisitCallExpr(clang::CallExpr* CE);
-    bool VisitFunctionDecl(clang::FunctionDecl* FD);
+    bool VisitFunctionDecl(clang::FunctionDecl* D);
 };
 
 // Semantic Rewriter, will rewrite source code based on the AST.
@@ -144,7 +144,7 @@ public:
     bool VisitCallExpr(clang::CallExpr* CE);
 
     // We want to investigate FunctionDecl's.
-    bool VisitFunctionDecl(clang::FunctionDecl* FD);
+    bool VisitFunctionDecl(clang::FunctionDecl* D);
 };
 
 // AST Consumer

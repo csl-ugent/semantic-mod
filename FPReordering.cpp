@@ -24,14 +24,14 @@ bool FPReorderingAnalyser::VisitBinaryOperator(clang::BinaryOperator* BE) {
             // If it is, check if it refers to a function
             const clang::FunctionDecl* FD = dyn_cast<FunctionDecl>(DRE->getFoundDecl());
             if (FD) {
-                const FunctionUnique function(FD, astContext);
-                const std::string& fileName = function.getFileName();
+                const FunctionUnique candidate(FD, astContext);
+                const std::string& fileName = candidate.getFileName();
 
                 // We make sure the file is contained in our base directory...
                 if (fileName.find(this->baseDirectory) == std::string::npos)
                     return true;
 
-                reordering.invalidateFunction(function, "function is assigned as a pointer");
+                reordering.invalidateCandidate(candidate, "function is assigned as a pointer");
             }
         }
     }
@@ -41,15 +41,15 @@ bool FPReorderingAnalyser::VisitBinaryOperator(clang::BinaryOperator* BE) {
 bool FPReorderingAnalyser::VisitCallExpr(clang::CallExpr* CE) {
     FunctionDecl* FD = CE->getDirectCallee();
     if (FD) {
-        const FunctionUnique function(FD, astContext);
-        const std::string& fileName = function.getFileName();
+        const FunctionUnique candidate(FD, astContext);
+        const std::string& fileName = candidate.getFileName();
 
         // We make sure the file is contained in our base directory...
         if (fileName.find(this->baseDirectory) == std::string::npos)
             return true;
 
         if (CE->getLocStart().isMacroID()) // Invalidate the function if it's in a macro.
-            reordering.invalidateFunction(function, "function is used in a macro");
+            reordering.invalidateCandidate(candidate, "function is used in a macro");
         else
         {
             // Check if any of the argument expression has side effects. In this case we invalidate the function.
@@ -60,7 +60,7 @@ bool FPReorderingAnalyser::VisitCallExpr(clang::CallExpr* CE) {
                 auto arg = CE->getArg(iii);
                 if (arg->HasSideEffects(astContext, true))
                 {
-                    reordering.invalidateFunction(function, "in one of the function invocations, one of the arguments has side effects");
+                    reordering.invalidateCandidate(candidate, "in one of the function invocations, one of the arguments has side effects");
                     break;
                 }
             }
@@ -79,17 +79,17 @@ bool FPReorderingAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
         // - can't be variadic (perhaps we can handle this in the future)
         // - has to have enough parameters, so at least 2
         if (!FD->isMain() && !FD->isVariadic() && FD->param_size() > 1) {
-            const FunctionUnique function(FD, astContext);
-            const std::string& fileName = function.getFileName();
+            const FunctionUnique candidate(FD, astContext);
+            const std::string& fileName = candidate.getFileName();
 
             // We make sure the file is contained in our base directory...
             if (fileName.find(this->baseDirectory) == std::string::npos)
                 return true;
 
-            FunctionData& data = reordering.candidates[function];
+            FunctionData& data = reordering.candidates[candidate];
             if (data.valid)
             {
-                llvm::outs() << "Found valid function: " << FD->getNameAsString() << "\n";
+                llvm::outs() << "Found valid candidate: " << candidate.getName() << "\n";
                 data.addParams(FD);
             }
         }
@@ -104,8 +104,8 @@ bool FPReorderingRewriter::VisitCallExpr(clang::CallExpr* CE) {
     if (FunctionDecl* FD = CE->getDirectCallee()) {
         // We check if this function is to be reordered
         const FPTransformation* transformation = reordering.transformation;
-        const FunctionUnique function(FD, astContext);
-        if (transformation->function == function) {
+        const FunctionUnique target(FD, astContext);
+        if (transformation->target == target) {
             llvm::outs() << "Call to function: " << FD->getNameAsString() << " has to be rewritten!\n";
 
             auto ordering = transformation->ordering;
@@ -116,7 +116,7 @@ bool FPReorderingRewriter::VisitCallExpr(clang::CallExpr* CE) {
                 const SourceRange oldRangeExpanded(astContext.getSourceManager().getExpansionRange(oldRange.getBegin()).first, astContext.getSourceManager().getExpansionRange(oldRange.getEnd()).second);
                 const SourceRange newRangeExpanded(astContext.getSourceManager().getExpansionRange(newRange.getBegin()).first, astContext.getSourceManager().getExpansionRange(newRange.getEnd()).second);
 
-                // We replace the field arg with another argument based on the reordering information.
+                // We replace the argument with another one based on the ordering.
                 const std::string substitute = location2str(newRangeExpanded, astContext);
                 this->rewriter->ReplaceText(oldRangeExpanded, substitute);
             }
@@ -129,8 +129,8 @@ bool FPReorderingRewriter::VisitCallExpr(clang::CallExpr* CE) {
 bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
     // Check if this is a declaration for the function that is to be reordered
     const FPTransformation* transformation = reordering.transformation;
-    FunctionUnique function(FD, astContext);
-    if (transformation->function == function) {
+    FunctionUnique target(FD, astContext);
+    if (transformation->target == target) {
         llvm::outs() << "Rewriting function: " << FD->getNameAsString() << " definition: " << FD->isThisDeclarationADefinition() << "\n";
 
         // We iterate over all parameters in the function declaration.
@@ -171,7 +171,7 @@ void fpreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory
     // We need to determine the maximum amount of reorderings that is actually
     // possible with the given input source files (based on the analysis phase).
     std::map<int, int> histogram;
-    long totalReorderings = 0;
+    unsigned long totalReorderings = 0;
     double averageParameters = 0;
     for (const auto& candidate : candidates) {
         unsigned nrParams = reordering.candidates[candidate].params.size();
@@ -227,16 +227,16 @@ void fpreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory
         output["file_function_name"] = chosen.getName();
         output["file_name"] = chosen.getFileName();
 
-        // We determine a random ordering of fields.
+        // We output the original order.
         Json::Value original(Json::arrayValue);
         std::vector<unsigned> ordering;
         for (unsigned iii = 0; iii < params.size(); iii++) {
             const FunctionParam& param = params[iii];
-            Json::Value field;
-            field["position"] = iii;
-            field["name"] = param.name;
-            field["type"] = param.type;
-            original.append(field);
+            Json::Value v;
+            v["position"] = iii;
+            v["name"] = param.name;
+            v["type"] = param.type;
+            original.append(v);
             ordering.push_back(iii);
         }
         output["original"]["fields"] = original;
@@ -250,7 +250,7 @@ void fpreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory
         // Check if this transformation isn't duplicate. If it is, we try again
         bool found = false;
         for (auto& t : transformations) {
-            if (t.function == chosen && t.ordering == ordering) {
+            if (t.target == chosen && t.ordering == ordering) {
                 found = true;
                 break;
             }
@@ -259,25 +259,24 @@ void fpreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory
             continue;
 
         // Debug information.
-        llvm::outs() << "Chosen Function: " << chosen.getName() << "\n";
+        llvm::outs() << "Chosen target: " << chosen.getName() << "\n";
         llvm::outs() << "Chosen ordering: " << "\n";
         for (auto it : ordering) {
             llvm::outs() << it << " ";
         }
         llvm::outs() << "\n";
 
-        // Create the output for the parameter reordering as decided
+        // Create the output for the reordering as decided.
         Json::Value modified(Json::arrayValue);
         for (size_t iii = 0; iii < ordering.size(); iii++) {
             unsigned old_pos = ordering[iii];
             const FunctionParam& param = params[old_pos];
 
-            // The chosen field.
-            Json::Value field;
-            field["position"] = iii;
-            field["name"] = param.name;
-            field["type"] = param.type;
-            modified.append(field);
+            Json::Value v;
+            v["position"] = iii;
+            v["name"] = param.name;
+            v["type"] = param.type;
+            modified.append(v);
             llvm::outs() << "Position:" << old_pos << " type: " << param.type << "\n";
         }
         output["modified"]["fields"] = modified;
@@ -297,7 +296,7 @@ void fpreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory
         FPTransformation* transformation = &transformations[iii];
         reordering.transformation = transformation;
 
-        llvm::outs() << "Phase 2: performing rewrite for version: " << iii + 1 << " function name: " << transformation->function.getName() << "\n";
+        llvm::outs() << "Phase 2: performing rewrite for version: " << iii + 1 << " target name: " << transformation->target.getName() << "\n";
         Tool->run(new SemanticFrontendActionFactory(reordering, rewriter, baseDirectory, Transformation::FPReordering, Phase::Rewrite, iii + 1, outputPrefix));
     }
 }
