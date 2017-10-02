@@ -75,6 +75,9 @@ class FunctionData {
                 params.emplace_back(param->getNameAsString(), param->getType().getAsString());
             }
         }
+        bool empty() {
+          return params.empty();
+        }
 };
 
 // Struct which describes the transformation

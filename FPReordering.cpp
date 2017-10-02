@@ -87,7 +87,7 @@ bool FPReorderingAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
                 return true;
 
             FunctionData& data = reordering.candidates[candidate];
-            if (data.valid)
+            if (data.valid && data.empty())
             {
                 llvm::outs() << "Found valid candidate: " << candidate.getName() << "\n";
                 data.addParams(FD);
