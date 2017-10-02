@@ -7,74 +7,6 @@
 #include <set>
 #include <string>
 
-// Data of fields appearing within a structure.
-typedef struct fieldData_ {
-
-    // Position.
-    int position;
-
-    // The name of the field.
-    std::string fieldName;
-
-    // The type of the field.
-    std::string fieldType;
-
-    // The range (location begin-end of where this field appears in
-    // the source code).
-    clang::SourceRange sourceRange;
-
-} FieldData;
-
-
-// Structure AST data.
-class StructData {
-private:
-    // The name of this structure.
-    std::string name;
-
-    // The fileName in which this struct appears.
-    std::string fileName;
-
-    // Information regarding the fields within the structure.
-    std::vector<FieldData> fieldData;
-
-    // Information regarding possible definitions of fields.
-    std::set<std::string> fieldDefinitions;
-
-public:
-
-    explicit StructData(std::string name, std::string fileName): name(name), fileName(fileName) {};
-
-    // Get the field definitions.
-    std::set<std::string> getFieldDefinitions() { return this->fieldDefinitions; }
-
-    // Method used to set the fielddefinitions.
-    void setFieldDefinitions(std::set<std::string> fieldDefinitions) {
-        this->fieldDefinitions = fieldDefinitions;
-    }
-
-    // Obtain the name of this structure.
-    std::string getName() { return this->name; }
-
-    // Obtain the fileName in which this structure is defined.
-    std::string getFileName() {return this->fileName; }
-
-    // Obtain the field data.
-    std::vector<FieldData> getFieldData() { return this->fieldData; }
-
-    // Obtain the amount of field data fields.
-    int getFieldDataSize() { return this->fieldData.size(); }
-
-    // Adding field data.
-    void addFieldData(int position, std::string fieldName, std::string fieldType, clang::SourceRange sourceRange);
-
-    // Method used to add a field definition.
-    void addFieldDefinition(std::string definition);
-
-    // Method used to check if this struct has field definitions.
-    bool hasFieldDefinitions();
-};
-
 // Switch AST data.
 class SwitchData {
 private:
@@ -110,61 +42,6 @@ public:
 class Reordering {
   protected:
     virtual ~Reordering() {}
-};
-
-// Structure reordering semantic modification.
-class StructReordering : public Reordering {
-private:
-
-    // Map containing all information regarding different structures.
-    std::map<std::string, StructData*> structMap;
-
-    // Map containing all information regarding reorderings.
-    std::map<std::string, StructData*> structReorderings;
-
-    // Set containing all structs that have been rewritten already.
-    std::set<std::string> rewritten;
-
-public:
-
-    explicit StructReordering() {}
-    ~StructReordering();
-
-    // Obtain the structure information map.
-    std::map<std::string, StructData*> getStructMap() { return structMap; }
-
-    // Obtain the structure reordering information map.
-    std::map<std::string, StructData*> getStructReorderings() { return structReorderings; }
-
-    // Check if a struct is already defined as a key in the struct map.
-    bool isInStructMap(std::string name);
-
-    // Check if a struct is already defined as a key in the struct reordering map.
-    bool isInStructReorderingMap(std::string name);
-
-    // Check if a struct has been rewritten already.
-    bool hasBeenRewritten(std::string name);
-
-    // Method used to add structure data to the struct data map.
-    // This object will take ownership of the allocated memory and release
-    // it when necessary.
-    void addStructData(std::string name, StructData* data);
-
-    // Method used to remove a struct from the struct data.
-    void removeStructData(std::string name);
-
-    // Method used to add structure reordering data to the structure reordering
-    // information map.
-    void addStructReorderingData(std::string name, StructData* data);
-
-    // Method used to add a structure to the set of rewritten structs.
-    void structRewritten(std::string name);
-
-    // Method used to clear the structure reordering information map.
-    void clearStructReorderings();
-
-    // Clear the set of structures that have been rewritten already.
-    void clearRewritten();
 };
 
 // Switch case reordering semantic modification.
