@@ -11,44 +11,21 @@ using namespace llvm;
 
 // AST visitor, used for analysis.
 bool SWCReorderingAnalyser::VisitSwitchStmt(clang::SwitchStmt* CS) {
+    const SwitchUnique candidate(CS, astContext);
+    const std::string& fileName = candidate.getFileName();
 
-    // We obtain the location encoding of this switch statement.
-    unsigned location = CS->getSwitchLoc().getRawEncoding();
-
-    // We check if we already visited this switch statement or not.
-    if (reordering.isInSwitchMap(location)) {
-        return true; // Switch case already visited.
-    }
-
-    // We create new switchData information.
-    StringRef fileNameRef = astContext->getSourceManager().getFilename(
-        CS->getSwitchLoc());
-
-    std::string fileNameStr;
-    if (fileNameRef.data()) {
-        fileNameStr = std::string(fileNameRef.data());
-
-        // We make sure the file is contained in our base directory...
-        if (fileNameStr.find(this->baseDirectory) == std::string::npos) {
-
-            // Declaration is not contained in a header located in
-            // the base directory...
-            return true;
-        }
-    } else {
-
-        // Invalid switch to analyse... (header name cannot be found?)
+    // We make sure the file is contained in our base directory...
+    if (fileName.find(this->baseDirectory) == std::string::npos)
         return true;
+
+    SwitchData& data = reordering.candidates[candidate];
+    if (data.valid && data.empty())
+    {
+        llvm::outs() << "Found valid candidate: " << candidate.getName() << "\n";
     }
 
     // DEBUG
-    llvm::outs() << "Found valid switch case: " << location << "\n";
-
-    // New switch data object.
-    SwitchData* switchData = new SwitchData(location, fileNameStr);
-
-    // We add it to the SwitchData map.
-    reordering.addSwitchData(location, switchData);
+    llvm::outs() << "Found valid switch case: " << "\n";
 
     // Continue AST traversal.
     return true;
@@ -76,11 +53,9 @@ void swcreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirector
     Tool->run(new SemanticFrontendActionFactory(reordering, rewriter, baseDirectory, Transformation::SWCReordering, Phase::Analysis));
 
     // We determine the amount of reorderings we are going to make.
-    int amount = amountOfReorderings;
-    int amountChosen = 0;
-    if (reordering.getSwitchMap().size() == 0) { // No switch cases...
-        amount = 0;
-    } // In case we have at least one switch case we should be able
+    //int amount = amountOfReorderings;
+    //int amountChosen = 0;
+    // In case we have at least one switch case we should be able
     // to infinite values to XOR with.
 
     Tool->run(new SemanticFrontendActionFactory(reordering, rewriter, baseDirectory, Transformation::SWCReordering, Phase::Rewrite));

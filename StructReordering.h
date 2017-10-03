@@ -2,7 +2,6 @@
 #define _STRUCTREORDERING
 
 #include "Semantic.h"
-#include "SemanticData.h"
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTContext.h"

@@ -7,7 +7,6 @@ add_clang_executable(semantic-mod
   FPReordering.cpp
   StructReordering.cpp
   SWCReordering.cpp
-  SemanticData.cpp
   SemanticUtil.cpp
   jsoncpp.cpp
   )

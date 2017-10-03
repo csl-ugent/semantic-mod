@@ -1,8 +1,6 @@
 #ifndef _SEMANTIC
 #define _SEMANTIC
 
-#include "SemanticData.h"
-
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -28,6 +26,11 @@ namespace Phase {
         Analysis, Rewrite
     };
 }
+
+class Reordering {
+  protected:
+    virtual ~Reordering() {}
+};
 
 // Reordering ASTConsumer
 template <typename ReorderingType, typename AnalyserType,  typename RewriterType>
