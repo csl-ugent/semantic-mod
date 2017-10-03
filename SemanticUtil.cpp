@@ -1,15 +1,21 @@
 #include "SemanticUtil.h"
 
+#include "clang/Lex/Lexer.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cmath>
 #include <cstdlib> // rand
 #include <fstream>
 #include <sstream>
-#include <string>
 
-using namespace llvm;
-
+// Obtain source information corresponding to a statement.
+std::string location2str(const clang::SourceRange& range, const clang::ASTContext& astContext) {
+    const clang::SourceManager& sm = astContext.getSourceManager();
+    clang::SourceLocation end = clang::Lexer::getLocForEndOfToken(range.getEnd(), 0, sm, astContext.getLangOpts());
+    const char* Start = sm.getCharacterData(range.getBegin());
+    const char* End = sm.getCharacterData(end);
+    return std::string(Start, End - Start);
+}
 
 void init_random(unsigned seed) {
     /* initialize random seed */

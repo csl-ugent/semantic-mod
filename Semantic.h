@@ -12,7 +12,6 @@
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/Rewriters.h"
-#include "clang/Basic/SourceManager.h"
 
 #include <string>
 
@@ -73,9 +72,6 @@ public:
         }
     }
 };
-
-// General utility functions.
-std::string location2str(const clang::SourceRange& range, const clang::ASTContext& astContext);
 
 // Semantic analyser frontend action: action that will start the consumer.
 class SemanticFrontendAction : public clang::ASTFrontendAction {

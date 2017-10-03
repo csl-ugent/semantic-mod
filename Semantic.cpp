@@ -3,23 +3,12 @@
 #include "StructReordering.h"
 #include "SWCReordering.h"
 
-#include "clang/Lex/Lexer.h"
-
 #include <fstream>
 #include <sstream>
 #include <string>
 
 using namespace clang;
 using namespace llvm;
-
-// Obtain source information corresponding to a statement.
-std::string location2str(const SourceRange& range, const ASTContext& astContext) {
-    const SourceManager& sm = astContext.getSourceManager();
-    SourceLocation end = clang::Lexer::getLocForEndOfToken(range.getEnd(), 0, sm, astContext.getLangOpts());
-    const char* Start = sm.getCharacterData(range.getBegin());
-    const char* End = sm.getCharacterData(end);
-    return std::string(Start, End - Start);
-}
 
 // Function used to create the semantic analyser frontend action.
 FrontendAction* SemanticFrontendActionFactory::create() {
