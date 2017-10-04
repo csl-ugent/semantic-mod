@@ -30,6 +30,9 @@ namespace Phase {
 class Reordering {
   protected:
     virtual ~Reordering() {}
+  public:
+    std::string baseDirectory;
+    Reordering(const std::string& bd) : baseDirectory(bd) {}
 };
 
 // Reordering ASTConsumer
@@ -39,19 +42,16 @@ private:
     ReorderingType& reordering;
     clang::Rewriter& rewriter;
     clang::CompilerInstance *CI;
-    std::string baseDirectory;
     Phase::Type phaseType;
 public:
     // Override the constructor in order to pass CI.
     explicit ReorderingASTConsumer(clang::CompilerInstance *CI,
                                      Reordering& r,
                                      clang::Rewriter& rewriter,
-                                     std::string baseDirectory,
                                      Phase::Type phaseType)
         : reordering(static_cast<ReorderingType&>(r)),
           rewriter(rewriter),
           CI(CI),
-          baseDirectory(baseDirectory),
           phaseType(phaseType)
     {
     }
@@ -62,7 +62,7 @@ public:
         switch(phaseType) {
             case Phase::Analysis:
                 {
-                    AnalyserType visitor = AnalyserType(this->CI, reordering, baseDirectory);
+                    AnalyserType visitor = AnalyserType(this->CI, reordering);
                     visitor.TraverseDecl(Context.getTranslationUnitDecl());
                     break;
                 }
@@ -83,16 +83,14 @@ private:
     clang::Rewriter& rewriter;
     int version;
     std::string outputPrefix;
-    std::string baseDirectory;
     Transformation::Type transType;
     Phase::Type phaseType;
 public:
-    explicit SemanticFrontendAction(Reordering& reordering, clang::Rewriter& rewriter, int version, std::string outputPrefix, std::string baseDirectory, Transformation::Type transType, Phase::Type phaseType)
+    explicit SemanticFrontendAction(Reordering& reordering, clang::Rewriter& rewriter, int version, std::string outputPrefix, Transformation::Type transType, Phase::Type phaseType)
     : reordering(reordering),
       rewriter(rewriter),
       version(version),
       outputPrefix(outputPrefix),
-      baseDirectory(baseDirectory),
       transType(transType),
       phaseType(phaseType)
     {}
@@ -108,16 +106,14 @@ class SemanticFrontendActionFactory : public clang::tooling::FrontendActionFacto
 private:
     Reordering& reordering;
     clang::Rewriter rewriter;
-    std::string baseDirectory;
     Transformation::Type transType;
     Phase::Type phaseType;
     int version;
     std::string outputPrefix;
 
 public:
-    SemanticFrontendActionFactory(Reordering& reordering, std::string baseDirectory, Transformation::Type transType, Phase::Type phaseType, int version = 0, std::string outputPrefix = "")
+    SemanticFrontendActionFactory(Reordering& reordering, Transformation::Type transType, Phase::Type phaseType, int version = 0, std::string outputPrefix = "")
         : reordering(reordering),
-          baseDirectory(baseDirectory),
           transType(transType),
           phaseType(phaseType),
           version(version),

@@ -90,7 +90,7 @@ struct FPTransformation {
 // Function parameter reordering semantic modification.
 class FPReordering : public Reordering {
 public:
-    explicit FPReordering() {}
+    explicit FPReordering(const std::string& bd) : Reordering(bd) {}
 
     // Map containing all information regarding different functions.
     llvm::MapVector<FunctionUnique, FunctionData, std::map<FunctionUnique, unsigned>> candidates;
@@ -109,15 +109,9 @@ class FPReorderingAnalyser : public clang::RecursiveASTVisitor<FPReorderingAnaly
 private:
     clang::ASTContext& astContext; // Used for getting additional AST info.
     FPReordering& reordering;
-    std::string baseDirectory;
 public:
-    explicit FPReorderingAnalyser(clang::CompilerInstance *CI,
-                                  FPReordering& reordering,
-                                  std::string baseDirectory)
-      : astContext(CI->getASTContext()),
-        reordering(reordering),
-        baseDirectory(baseDirectory)
-    { }
+    explicit FPReorderingAnalyser(clang::CompilerInstance *CI, FPReordering& reordering)
+      : astContext(CI->getASTContext()), reordering(reordering) { }
 
     // We want to investigate Function declarations and invocations
     bool VisitBinaryOperator(clang::BinaryOperator* DRE);

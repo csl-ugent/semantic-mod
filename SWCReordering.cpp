@@ -15,7 +15,7 @@ bool SWCReorderingAnalyser::VisitSwitchStmt(clang::SwitchStmt* CS) {
     const std::string& fileName = candidate.getFileName();
 
     // We make sure the file is contained in our base directory...
-    if (fileName.find(this->baseDirectory) == std::string::npos)
+    if (fileName.find(reordering.baseDirectory) == std::string::npos)
         return true;
 
     SwitchData& data = reordering.candidates[candidate];
@@ -48,8 +48,8 @@ void swcreordering(ClangTool* Tool, std::string baseDirectory, std::string outpu
     llvm::outs() << "Phase 1: Switch Case Analysis\n";
 
     // We run the analysis phase.
-    SWCReordering reordering;
-    Tool->run(new SemanticFrontendActionFactory(reordering, baseDirectory, Transformation::SWCReordering, Phase::Analysis));
+    SWCReordering reordering(baseDirectory);
+    Tool->run(new SemanticFrontendActionFactory(reordering, Transformation::SWCReordering, Phase::Analysis));
 
     // We determine the amount of reorderings we are going to make.
     //int amount = amountOfReorderings;
@@ -57,5 +57,5 @@ void swcreordering(ClangTool* Tool, std::string baseDirectory, std::string outpu
     // In case we have at least one switch case we should be able
     // to infinite values to XOR with.
 
-    Tool->run(new SemanticFrontendActionFactory(reordering, baseDirectory, Transformation::SWCReordering, Phase::Rewrite));
+    Tool->run(new SemanticFrontendActionFactory(reordering, Transformation::SWCReordering, Phase::Rewrite));
 }

@@ -90,7 +90,7 @@ struct StructTransformation {
 
 class StructReordering : public Reordering {
 public:
-    explicit StructReordering() {}
+    explicit StructReordering(const std::string& bd) : Reordering(bd) {}
 
     // Map containing all information regarding candidates.
     llvm::MapVector<StructUnique, StructData, std::map<StructUnique, unsigned>> candidates;
@@ -112,15 +112,9 @@ class StructReorderingAnalyser : public clang::RecursiveASTVisitor<StructReorder
 private:
     clang::ASTContext& astContext; // Used for getting additional AST info.
     StructReordering& reordering;
-    std::string baseDirectory;
 public:
-    explicit StructReorderingAnalyser(clang::CompilerInstance *CI,
-                              StructReordering& reordering,
-                              std::string baseDirectory)
-      : astContext(CI->getASTContext()),
-        reordering(reordering), // Initialize private members.
-        baseDirectory(baseDirectory)
-    { }
+    explicit StructReorderingAnalyser(clang::CompilerInstance *CI, StructReordering& reordering)
+      : astContext(CI->getASTContext()), reordering(reordering) { }
 
     // We want to investigate all possible struct declarations and uses
     void detectStructsRecursively(const clang::Type* origType);

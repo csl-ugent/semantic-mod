@@ -25,7 +25,7 @@ bool StructReorderingAnalyser::VisitRecordDecl(clang::RecordDecl* D) {
             const std::string& fileName = candidate.getFileName();
 
             // We make sure the file is contained in our base directory...
-            if (fileName.find(this->baseDirectory) == std::string::npos)
+            if (fileName.find(reordering.baseDirectory) == std::string::npos)
                 return true;
 
             // To be a valid candidate none of the fields can be macro.
@@ -54,7 +54,7 @@ void StructReorderingAnalyser::detectStructsRecursively(const Type* origType) {
             const std::string& fileName = candidate.getFileName();
 
             // We make sure the file is contained in our base directory...
-            if (fileName.find(this->baseDirectory) == std::string::npos)
+            if (fileName.find(reordering.baseDirectory) == std::string::npos)
                 return;
 
             // Invalidate the struct.
@@ -136,8 +136,8 @@ void structReordering(ClangTool* Tool, std::string baseDirectory, std::string ou
     llvm::outs() << "Phase 1: Struct analysis\n";
 
     // We run the analysis phase.
-    StructReordering reordering;
-    Tool->run(new SemanticFrontendActionFactory(reordering, baseDirectory, Transformation::StructReordering, Phase::Analysis));
+    StructReordering reordering(baseDirectory);
+    Tool->run(new SemanticFrontendActionFactory(reordering, Transformation::StructReordering, Phase::Analysis));
     std::vector<StructUnique> candidates;
     for (const auto& it : reordering.candidates) {
         if (it.second.valid)
@@ -262,6 +262,6 @@ void structReordering(ClangTool* Tool, std::string baseDirectory, std::string ou
         reordering.transformation = transformation;
 
         llvm::outs() << "Phase 2: performing rewrite for version: " << iii + 1 << " target name: " << transformation->target.getName() << "\n";
-        Tool->run(new SemanticFrontendActionFactory(reordering, baseDirectory, Transformation::StructReordering, Phase::Rewrite, iii + 1, outputPrefix));
+        Tool->run(new SemanticFrontendActionFactory(reordering, Transformation::StructReordering, Phase::Rewrite, iii + 1, outputPrefix));
     }
 }

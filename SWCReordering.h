@@ -64,7 +64,7 @@ struct SwitchTransformation {
 
 class SWCReordering : public Reordering {
 public:
-    explicit SWCReordering() {}
+    explicit SWCReordering(const std::string& bd) : Reordering(bd) {}
 
     // Map containing all information regarding candidates.
     llvm::MapVector<SwitchUnique, SwitchData, std::map<SwitchUnique, unsigned>> candidates;
@@ -86,15 +86,9 @@ class SWCReorderingAnalyser : public clang::RecursiveASTVisitor<SWCReorderingAna
 private:
     clang::ASTContext& astContext; // Used for getting additional AST info.
     SWCReordering& reordering;
-    std::string baseDirectory;
 public:
-    explicit SWCReorderingAnalyser(clang::CompilerInstance *CI,
-                                  SWCReordering& reordering,
-                                  std::string baseDirectory)
-      : astContext(CI->getASTContext()),
-        reordering(reordering),
-        baseDirectory(baseDirectory)
-    { }
+    explicit SWCReorderingAnalyser(clang::CompilerInstance *CI, SWCReordering& reordering)
+      : astContext(CI->getASTContext()), reordering(reordering) { }
 
     // We want to investigate switch statements.
     bool VisitSwitchStmt(clang::SwitchStmt* CS);

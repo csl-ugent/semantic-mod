@@ -14,7 +14,7 @@ using namespace llvm;
 FrontendAction* SemanticFrontendActionFactory::create() {
 
     // We create a new instance of the frontend action.
-    return new SemanticFrontendAction(reordering, this->rewriter, this->version, this->outputPrefix, this->baseDirectory, this->transType, this->phaseType);
+    return new SemanticFrontendAction(reordering, this->rewriter, this->version, this->outputPrefix, this->transType, this->phaseType);
 }
 
 // Semantic frontend action: action that will start the consumer.
@@ -22,11 +22,11 @@ std::unique_ptr<ASTConsumer> SemanticFrontendAction::CreateASTConsumer(CompilerI
 
     // We create a new AST consumer based on the type of transformation.
     if (this->transType == Transformation::StructReordering) {
-        return llvm::make_unique<StructReorderingASTConsumer>(&CI, reordering, this->rewriter, this->baseDirectory, this->phaseType);
+        return llvm::make_unique<StructReorderingASTConsumer>(&CI, reordering, this->rewriter, this->phaseType);
     } else if (this->transType == Transformation::FPReordering) {
-        return llvm::make_unique<FPReorderingASTConsumer>(&CI, reordering, this->rewriter, this->baseDirectory, this->phaseType);
+        return llvm::make_unique<FPReorderingASTConsumer>(&CI, reordering, this->rewriter, this->phaseType);
     } else if (this->transType == Transformation::SWCReordering) {
-        return llvm::make_unique<SWCReorderingASTConsumer>(&CI, reordering, this->rewriter, this->baseDirectory, this->phaseType);
+        return llvm::make_unique<SWCReorderingASTConsumer>(&CI, reordering, this->rewriter, this->phaseType);
     }
 }
 
@@ -73,7 +73,7 @@ void SemanticFrontendAction::writeChangesToOutput() {
         StringRef fileNameRef = rewriter.getSourceMgr().getFileEntryForID(I->first)->getName();
         std::string fileNameStr = std::string(fileNameRef.data());
         llvm::outs() << "Obtained filename: " << fileNameStr << "\n";
-        std::string fileName = fileNameStr.substr(fileNameStr.find(baseDirectory) + baseDirectory.length()); /* until the end automatically... */
+        std::string fileName = fileNameStr.substr(fileNameStr.find(reordering.baseDirectory) + reordering.baseDirectory.length()); /* until the end automatically... */
 
         // Optionally create required subdirectories.
         {

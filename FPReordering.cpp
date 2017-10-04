@@ -28,7 +28,7 @@ bool FPReorderingAnalyser::VisitBinaryOperator(clang::BinaryOperator* BE) {
                 const std::string& fileName = candidate.getFileName();
 
                 // We make sure the file is contained in our base directory...
-                if (fileName.find(this->baseDirectory) == std::string::npos)
+                if (fileName.find(reordering.baseDirectory) == std::string::npos)
                     return true;
 
                 reordering.invalidateCandidate(candidate, "function is assigned as a pointer");
@@ -45,7 +45,7 @@ bool FPReorderingAnalyser::VisitCallExpr(clang::CallExpr* CE) {
         const std::string& fileName = candidate.getFileName();
 
         // We make sure the file is contained in our base directory...
-        if (fileName.find(this->baseDirectory) == std::string::npos)
+        if (fileName.find(reordering.baseDirectory) == std::string::npos)
             return true;
 
         if (CE->getLocStart().isMacroID()) // Invalidate the function if it's in a macro.
@@ -83,7 +83,7 @@ bool FPReorderingAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
             const std::string& fileName = candidate.getFileName();
 
             // We make sure the file is contained in our base directory...
-            if (fileName.find(this->baseDirectory) == std::string::npos)
+            if (fileName.find(reordering.baseDirectory) == std::string::npos)
                 return true;
 
             FunctionData& data = reordering.candidates[candidate];
@@ -157,8 +157,8 @@ void fpreordering(ClangTool* Tool, std::string baseDirectory, std::string output
     llvm::outs() << "Phase 1: Function Analysis\n";
 
     // We run the analysis phase and get the valid candidates
-    FPReordering reordering;
-    Tool->run(new SemanticFrontendActionFactory(reordering, baseDirectory, Transformation::FPReordering, Phase::Analysis));
+    FPReordering reordering(baseDirectory);
+    Tool->run(new SemanticFrontendActionFactory(reordering, Transformation::FPReordering, Phase::Analysis));
     std::vector<FunctionUnique> candidates;
     for (const auto& it : reordering.candidates) {
         if (it.second.valid)
@@ -297,6 +297,6 @@ void fpreordering(ClangTool* Tool, std::string baseDirectory, std::string output
         reordering.transformation = transformation;
 
         llvm::outs() << "Phase 2: performing rewrite for version: " << iii + 1 << " target name: " << transformation->target.getName() << "\n";
-        Tool->run(new SemanticFrontendActionFactory(reordering, baseDirectory, Transformation::FPReordering, Phase::Rewrite, iii + 1, outputPrefix));
+        Tool->run(new SemanticFrontendActionFactory(reordering, Transformation::FPReordering, Phase::Rewrite, iii + 1, outputPrefix));
     }
 }
