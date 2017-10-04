@@ -105,7 +105,7 @@ public:
 };
 
 // Declaration of used methods.
-void structReordering(clang::Rewriter* rewriter, clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);
+void structReordering(clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);
 
 // Semantic analyser, willl analyse different nodes within the AST.
 class StructReorderingAnalyser : public clang::RecursiveASTVisitor<StructReorderingAnalyser> {
@@ -133,16 +133,16 @@ class StructReorderingRewriter : public clang::RecursiveASTVisitor<StructReorder
 private:
     clang::ASTContext& astContext; // Used for getting additional AST info.
     StructReordering& reordering;
-    clang::Rewriter* rewriter;
+    clang::Rewriter& rewriter;
 public:
     explicit StructReorderingRewriter(clang::CompilerInstance *CI,
                               StructReordering& reordering,
-                              clang::Rewriter* rewriter)
+                              clang::Rewriter& rewriter)
       : astContext(CI->getASTContext()),
         reordering(reordering),
         rewriter(rewriter) // Initialize private members.
     {
-        rewriter->setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
+        rewriter.setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
     }
 
     // We want to investigate top-level things.

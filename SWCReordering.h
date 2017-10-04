@@ -79,7 +79,7 @@ public:
 };
 
 // Declaration of used methods.
-void swcreordering(clang::Rewriter* rewriter, clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);
+void swcreordering(clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);
 
 // Semantic analyser, willl analyse different nodes within the AST.
 class SWCReorderingAnalyser : public clang::RecursiveASTVisitor<SWCReorderingAnalyser> {
@@ -105,16 +105,16 @@ class SWCReorderingRewriter : public clang::RecursiveASTVisitor<SWCReorderingRew
 private:
     clang::ASTContext& astContext; // Used for getting additional AST info.
     SWCReordering& reordering;
-    clang::Rewriter* rewriter;
+    clang::Rewriter& rewriter;
 public:
     explicit SWCReorderingRewriter(clang::CompilerInstance *CI,
                                    SWCReordering& reordering,
-                                   clang::Rewriter* rewriter)
+                                   clang::Rewriter& rewriter)
       : astContext(CI->getASTContext()),
         reordering(reordering),
         rewriter(rewriter) // Initialize private members.
     {
-        rewriter->setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
+        rewriter.setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
     }
 
     // We want to rewrite switch statements.

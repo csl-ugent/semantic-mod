@@ -123,7 +123,7 @@ bool StructReorderingRewriter::VisitRecordDecl(clang::RecordDecl* D) {
 
                 // We replace the field with another one based on the ordering.
                 const std::string substitute = location2str(newRangeExpanded, astContext);
-                this->rewriter->ReplaceText(oldRangeExpanded, substitute);
+                rewriter.ReplaceText(oldRangeExpanded, substitute);
             }
         }
     }
@@ -131,13 +131,13 @@ bool StructReorderingRewriter::VisitRecordDecl(clang::RecordDecl* D) {
 }
 
 // Method used for the structreordering semantic transformation.
-void structReordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings) {
+void structReordering(ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings) {
     // Debug information.
     llvm::outs() << "Phase 1: Struct analysis\n";
 
     // We run the analysis phase.
     StructReordering reordering;
-    Tool->run(new SemanticFrontendActionFactory(reordering, rewriter, baseDirectory, Transformation::StructReordering, Phase::Analysis));
+    Tool->run(new SemanticFrontendActionFactory(reordering, baseDirectory, Transformation::StructReordering, Phase::Analysis));
     std::vector<StructUnique> candidates;
     for (const auto& it : reordering.candidates) {
         if (it.second.valid)
@@ -262,6 +262,6 @@ void structReordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirec
         reordering.transformation = transformation;
 
         llvm::outs() << "Phase 2: performing rewrite for version: " << iii + 1 << " target name: " << transformation->target.getName() << "\n";
-        Tool->run(new SemanticFrontendActionFactory(reordering, rewriter, baseDirectory, Transformation::StructReordering, Phase::Rewrite, iii + 1, outputPrefix));
+        Tool->run(new SemanticFrontendActionFactory(reordering, baseDirectory, Transformation::StructReordering, Phase::Rewrite, iii + 1, outputPrefix));
     }
 }

@@ -37,7 +37,7 @@ template <typename ReorderingType, typename AnalyserType,  typename RewriterType
 class ReorderingASTConsumer : public clang::ASTConsumer {
 private:
     ReorderingType& reordering;
-    clang::Rewriter* rewriter;
+    clang::Rewriter& rewriter;
     clang::CompilerInstance *CI;
     std::string baseDirectory;
     Phase::Type phaseType;
@@ -45,7 +45,7 @@ public:
     // Override the constructor in order to pass CI.
     explicit ReorderingASTConsumer(clang::CompilerInstance *CI,
                                      Reordering& r,
-                                     clang::Rewriter* rewriter,
+                                     clang::Rewriter& rewriter,
                                      std::string baseDirectory,
                                      Phase::Type phaseType)
         : reordering(static_cast<ReorderingType&>(r)),
@@ -80,14 +80,14 @@ public:
 class SemanticFrontendAction : public clang::ASTFrontendAction {
 private:
     Reordering& reordering;
-    clang::Rewriter* rewriter;
+    clang::Rewriter& rewriter;
     int version;
     std::string outputPrefix;
     std::string baseDirectory;
     Transformation::Type transType;
     Phase::Type phaseType;
 public:
-    explicit SemanticFrontendAction(Reordering& reordering, clang::Rewriter* rewriter, int version, std::string outputPrefix, std::string baseDirectory, Transformation::Type transType, Phase::Type phaseType)
+    explicit SemanticFrontendAction(Reordering& reordering, clang::Rewriter& rewriter, int version, std::string outputPrefix, std::string baseDirectory, Transformation::Type transType, Phase::Type phaseType)
     : reordering(reordering),
       rewriter(rewriter),
       version(version),
@@ -107,7 +107,7 @@ class SemanticFrontendActionFactory : public clang::tooling::FrontendActionFacto
 {
 private:
     Reordering& reordering;
-    clang::Rewriter* rewriter;
+    clang::Rewriter rewriter;
     std::string baseDirectory;
     Transformation::Type transType;
     Phase::Type phaseType;
@@ -115,9 +115,8 @@ private:
     std::string outputPrefix;
 
 public:
-    SemanticFrontendActionFactory(Reordering& reordering, clang::Rewriter* rewriter, std::string baseDirectory, Transformation::Type transType, Phase::Type phaseType, int version = 0, std::string outputPrefix = "")
+    SemanticFrontendActionFactory(Reordering& reordering, std::string baseDirectory, Transformation::Type transType, Phase::Type phaseType, int version = 0, std::string outputPrefix = "")
         : reordering(reordering),
-          rewriter(rewriter),
           baseDirectory(baseDirectory),
           transType(transType),
           phaseType(phaseType),

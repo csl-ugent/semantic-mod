@@ -16,7 +16,7 @@
 #include <string>
 
 // Declaration of used methods.
-void fpreordering(clang::Rewriter* rewriter, clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);
+void fpreordering(clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);
 
 class FunctionUnique {
         std::string name;
@@ -130,16 +130,16 @@ class FPReorderingRewriter : public clang::RecursiveASTVisitor<FPReorderingRewri
 private:
     clang::ASTContext& astContext; // Used for getting additional AST info.
     FPReordering& reordering;
-    clang::Rewriter* rewriter;
+    clang::Rewriter& rewriter;
 public:
     explicit FPReorderingRewriter(clang::CompilerInstance *CI,
                                   FPReordering& reordering,
-                                  clang::Rewriter* rewriter)
+                                  clang::Rewriter& rewriter)
       : astContext(CI->getASTContext()),
         reordering(reordering),
         rewriter(rewriter) // Initialize private members.
     {
-        rewriter->setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
+        rewriter.setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
     }
 
     // We need to rewrite calls to these reorered functions.

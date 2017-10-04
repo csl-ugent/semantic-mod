@@ -118,7 +118,7 @@ bool FPReorderingRewriter::VisitCallExpr(clang::CallExpr* CE) {
 
                 // We replace the argument with another one based on the ordering.
                 const std::string substitute = location2str(newRangeExpanded, astContext);
-                this->rewriter->ReplaceText(oldRangeExpanded, substitute);
+                rewriter.ReplaceText(oldRangeExpanded, substitute);
             }
         }
     }
@@ -144,7 +144,7 @@ bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
             std::string substitute = type + " " + name;
 
             // We replace the field with the new field information.
-            this->rewriter->ReplaceText(oldParam->getSourceRange(), substitute);
+            rewriter.ReplaceText(oldParam->getSourceRange(), substitute);
         }
     }
 
@@ -152,13 +152,13 @@ bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
 }
 
 // Method used for the function parameter semantic transformation.
-void fpreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings) {
+void fpreordering(ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings) {
     // Debug information.
     llvm::outs() << "Phase 1: Function Analysis\n";
 
     // We run the analysis phase and get the valid candidates
     FPReordering reordering;
-    Tool->run(new SemanticFrontendActionFactory(reordering, rewriter, baseDirectory, Transformation::FPReordering, Phase::Analysis));
+    Tool->run(new SemanticFrontendActionFactory(reordering, baseDirectory, Transformation::FPReordering, Phase::Analysis));
     std::vector<FunctionUnique> candidates;
     for (const auto& it : reordering.candidates) {
         if (it.second.valid)
@@ -297,6 +297,6 @@ void fpreordering(Rewriter* rewriter, ClangTool* Tool, std::string baseDirectory
         reordering.transformation = transformation;
 
         llvm::outs() << "Phase 2: performing rewrite for version: " << iii + 1 << " target name: " << transformation->target.getName() << "\n";
-        Tool->run(new SemanticFrontendActionFactory(reordering, rewriter, baseDirectory, Transformation::FPReordering, Phase::Rewrite, iii + 1, outputPrefix));
+        Tool->run(new SemanticFrontendActionFactory(reordering, baseDirectory, Transformation::FPReordering, Phase::Rewrite, iii + 1, outputPrefix));
     }
 }
