@@ -5,6 +5,7 @@
 
 #include "json.h"
 
+#include <algorithm>
 #include <sstream>
 #include <string>
 
@@ -152,7 +153,7 @@ bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
 }
 
 // Method used for the function parameter semantic transformation.
-void fpreordering(ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings) {
+void fpreordering(ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, const unsigned long numberOfReorderings) {
     // We run the analysis phase and get the valid candidates
     FPReordering reordering(baseDirectory);
     Tool->run(new AnalysisFrontendActionFactory<FPReordering, FPReorderingAnalyser>(reordering));
@@ -167,76 +168,63 @@ void fpreordering(ClangTool* Tool, std::string baseDirectory, std::string output
 
     // We need to determine the maximum amount of reorderings that is actually
     // possible with the given input source files (based on the analysis phase).
-    std::map<int, int> histogram;
+    std::map<unsigned, unsigned> histogram;
     unsigned long totalReorderings = 0;
-    double averageParameters = 0;
+    double avgItems = 0;
     for (const auto& candidate : candidates) {
-        unsigned nrParams = reordering.candidates[candidate].params.size();
+        unsigned nrOfItems = reordering.candidates[candidate].nrOfItems();
 
-        // We increase the total possible reorderings, based on
-        // the factorial of the number of fields.
-        totalReorderings += factorial(nrParams);
-        averageParameters += nrParams;
+        // Keep count of the total possible reorderings and the average number of items
+        totalReorderings += factorial(nrOfItems);
+        avgItems += nrOfItems;
 
         // Look if this amount has already occured or not.
-        if (histogram.find(nrParams) != histogram.end()) {
-            histogram[nrParams]++;
+        if (histogram.find(nrOfItems) != histogram.end()) {
+            histogram[nrOfItems]++;
         } else {
-            histogram[nrParams] = 1;
+            histogram[nrOfItems] = 1;
         }
     }
 
     // Create analytics
     Json::Value analytics;
-    analytics["amount_of_functions"] = candidates.size();
-    analytics["avg_function_parameters"] = averageParameters / candidates.size();
+    analytics["number_of_candidates"] = candidates.size();
+    analytics["avg_items"] = avgItems / candidates.size();
     analytics["entropy"] = entropyEquiprobable(totalReorderings);
 
-    // Add function parameter histogram.
+    // Add histogram.
     for (const auto& it : histogram) {
         std::stringstream ss;
         ss << it.first;
-        analytics["function_parameters"][ss.str()] = it.second;
+        analytics["histogram"][ss.str()] = it.second;
     }
 
     // Output analytics
-    llvm::outs() << "Total reorderings possible with " << candidates.size() << " functions is: " << totalReorderings << "\n";
+    llvm::outs() << "Total number of reorderings possible with " << candidates.size() << " candidates is: " << totalReorderings << "\n";
     llvm::outs() << "Writing analytics output...\n";
     writeJSONToFile(outputDirectory, -1, "analytics.json", analytics);
 
     // Get the output prefix
     std::string outputPrefix = outputDirectory + "function_r_";
 
-    // We choose the amount of configurations of this struct that is required.
-    unsigned long amount = amountOfReorderings;
     unsigned long amountChosen = 0;
+    unsigned long amount = std::min(numberOfReorderings, totalReorderings);
     std::vector<FPTransformation> transformations;
     llvm::outs() << "Amount of reorderings is set to: " << amount << "\n";
     while (amountChosen < amount)
     {
         // We choose a candidate at random.
-        FunctionUnique& chosen = candidates[random_0_to_n(candidates.size())];
-        std::vector<FunctionParam>& params = reordering.candidates[chosen].params;
+        const auto& chosen = candidates[random_0_to_n(candidates.size())];
+
+        // Create original ordering
+        std::vector<unsigned> ordering(reordering.candidates[chosen].nrOfItems());
+        std::iota(ordering.begin(), ordering.end(), 0);
 
         // Things we should write to an output file.
         Json::Value output;
-        output["type"] = "function_parameter_reordering";
-        output["file_function_name"] = chosen.getName();
+        output["target_name"] = chosen.getName();
         output["file_name"] = chosen.getFileName();
-
-        // We output the original order.
-        Json::Value original(Json::arrayValue);
-        std::vector<unsigned> ordering;
-        for (unsigned iii = 0; iii < params.size(); iii++) {
-            const FunctionParam& param = params[iii];
-            Json::Value v;
-            v["position"] = iii;
-            v["name"] = param.name;
-            v["type"] = param.type;
-            original.append(v);
-            ordering.push_back(iii);
-        }
-        output["original"]["fields"] = original;
+        output["original"]["items"] = reordering.candidates[chosen].getJSON(ordering);// We output the original order.
 
         // Make sure the modified ordering isn't the same as the original
         std::vector<unsigned> original_ordering = ordering;
@@ -246,7 +234,7 @@ void fpreordering(ClangTool* Tool, std::string baseDirectory, std::string output
 
         // Check if this transformation isn't duplicate. If it is, we try again
         bool found = false;
-        for (auto& t : transformations) {
+        for (const auto& t : transformations) {
             if (t.target == chosen && t.ordering == ordering) {
                 found = true;
                 break;
@@ -263,20 +251,7 @@ void fpreordering(ClangTool* Tool, std::string baseDirectory, std::string output
         }
         llvm::outs() << "\n";
 
-        // Create the output for the reordering as decided.
-        Json::Value modified(Json::arrayValue);
-        for (size_t iii = 0; iii < ordering.size(); iii++) {
-            unsigned old_pos = ordering[iii];
-            const FunctionParam& param = params[old_pos];
-
-            Json::Value v;
-            v["position"] = iii;
-            v["name"] = param.name;
-            v["type"] = param.type;
-            modified.append(v);
-            llvm::outs() << "Position:" << old_pos << " type: " << param.type << "\n";
-        }
-        output["modified"]["fields"] = modified;
+        output["modified"]["items"] = reordering.candidates[chosen].getJSON(ordering);// We output the modified order.
 
         // We write some information regarding the performed transformations to output.
         writeJSONToFile(outputPrefix, amountChosen+1, "transformations.json", output);
@@ -290,8 +265,7 @@ void fpreordering(ClangTool* Tool, std::string baseDirectory, std::string output
     for (unsigned long iii = 0; iii < amount; iii++)
     {
         // We select the current transformation
-        FPTransformation* transformation = &transformations[iii];
-        reordering.transformation = transformation;
+        reordering.transformation = &transformations[iii];
 
         Tool->run(new RewritingFrontendActionFactory<FPReordering, FPReorderingRewriter>(reordering, iii + 1, outputPrefix));
     }

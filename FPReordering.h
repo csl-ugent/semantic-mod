@@ -12,11 +12,13 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/MapVector.h"
 
+#include "json.h"
+
 #include <cstdlib>
 #include <string>
 
 // Declaration of used methods.
-void fpreordering(clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);
+void fpreordering(clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, const unsigned long amountOfReorderings);
 
 class FunctionUnique {
         std::string name;
@@ -54,14 +56,14 @@ class FunctionUnique {
         }
 };
 
-struct FunctionParam {
+class FunctionData {
+    struct FunctionParam {
         std::string name;
         std::string type;
 
         FunctionParam(std::string name, std::string type) : name(name), type(type) {}
-};
+    };
 
-class FunctionData {
     public:
         bool valid;
         std::vector<FunctionParam> params;
@@ -76,6 +78,21 @@ class FunctionData {
         }
         bool empty() {
           return params.empty();
+        }
+        Json::Value getJSON(const std::vector<unsigned>& ordering) {
+            Json::Value items(Json::arrayValue);
+            for (unsigned iii = 0; iii < params.size(); iii++) {
+                const FunctionParam& param = params[ordering[iii]];
+                Json::Value v;
+                v["position"] = iii;
+                v["name"] = param.name;
+                v["type"] = param.type;
+                items.append(v);
+            }
+            return items;
+        }
+        unsigned nrOfItems() {
+            return params.size();
         }
 };
 
