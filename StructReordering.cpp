@@ -1,16 +1,11 @@
 #include "StructReordering.h"
 #include "SemanticUtil.h"
 
-#include "clang/Tooling/Tooling.h"
-
-#include "json.h"
-
 #include <iterator>
 #include <string>
 #include <vector>
 
 using namespace clang;
-using namespace clang::tooling;
 using namespace llvm;
 
 bool StructReorderingAnalyser::VisitRecordDecl(clang::RecordDecl* D) {

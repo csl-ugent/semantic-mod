@@ -11,7 +11,6 @@
 #include "clang/Rewrite/Frontend/Rewriters.h"
 #include "llvm/ADT/MapVector.h"
 
-#include <cstdlib>
 #include <string>
 
 class FunctionUnique {

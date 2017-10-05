@@ -2,7 +2,6 @@
 #include "SemanticUtil.h"
 
 using namespace clang;
-using namespace clang::tooling;
 using namespace llvm;
 
 // AST visitor, used for analysis.

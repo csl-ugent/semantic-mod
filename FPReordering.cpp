@@ -4,7 +4,6 @@
 #include <string>
 
 using namespace clang;
-using namespace clang::tooling;
 using namespace llvm;
 
 // We use this visitor to check for function pointers. If a pointer to a function is assigned, we invalidate the function

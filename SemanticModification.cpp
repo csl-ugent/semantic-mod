@@ -1,5 +1,4 @@
 #include "FPReordering.h"
-#include "Semantic.h"
 #include "SemanticUtil.h"
 #include "StructReordering.h"
 #include "SWCReordering.h"

@@ -5,9 +5,8 @@
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/Frontend/FrontendActions.h"
-#include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/Rewriters.h"
 #include "llvm/ADT/MapVector.h"
