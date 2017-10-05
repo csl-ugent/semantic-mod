@@ -55,7 +55,7 @@ class StructUnique {
         }
 };
 
-class StructData {
+class StructData : public TargetData {
     struct StructField {
         std::string name;
         std::string type;
@@ -64,10 +64,9 @@ class StructData {
     };
 
     public:
-        bool valid;
         std::vector<StructField> fields;
 
-        StructData(bool valid = true) : valid(valid) {}
+        StructData(bool valid = true) : TargetData(valid) {}
         void addFields(clang::RecordDecl* D)
         {
             for(auto field : D->fields())
@@ -75,10 +74,10 @@ class StructData {
                 fields.emplace_back(field->getNameAsString(), field->getType().getAsString());
             }
         }
-        bool empty() {
+        bool empty() const {
           return fields.empty();
         }
-        Json::Value getJSON(const std::vector<unsigned>& ordering) {
+        Json::Value getJSON(const std::vector<unsigned>& ordering) const {
             Json::Value items(Json::arrayValue);
             for (unsigned iii = 0; iii < fields.size(); iii++) {
                 const StructField& param = fields[ordering[iii]];
@@ -90,7 +89,7 @@ class StructData {
             }
             return items;
         }
-        unsigned nrOfItems() {
+        unsigned nrOfItems() const {
             return fields.size();
         }
 };

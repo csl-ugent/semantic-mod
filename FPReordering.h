@@ -11,8 +11,6 @@
 #include "clang/Rewrite/Frontend/Rewriters.h"
 #include "llvm/ADT/MapVector.h"
 
-#include "json.h"
-
 #include <cstdlib>
 #include <string>
 
@@ -52,7 +50,7 @@ class FunctionUnique {
         }
 };
 
-class FunctionData {
+class FunctionData : public TargetData {
     struct FunctionParam {
         std::string name;
         std::string type;
@@ -61,10 +59,9 @@ class FunctionData {
     };
 
     public:
-        bool valid;
         std::vector<FunctionParam> params;
 
-        FunctionData(bool valid = true) : valid(valid) {}
+        FunctionData(bool valid = true) : TargetData(valid) {}
         void addParams(clang::FunctionDecl* D)
         {
             for (unsigned iii = 0; iii < D->getNumParams(); iii++) {
@@ -72,10 +69,10 @@ class FunctionData {
                 params.emplace_back(param->getNameAsString(), param->getType().getAsString());
             }
         }
-        bool empty() {
+        bool empty() const {
           return params.empty();
         }
-        Json::Value getJSON(const std::vector<unsigned>& ordering) {
+        Json::Value getJSON(const std::vector<unsigned>& ordering) const {
             Json::Value items(Json::arrayValue);
             for (unsigned iii = 0; iii < params.size(); iii++) {
                 const FunctionParam& param = params[ordering[iii]];
@@ -87,7 +84,7 @@ class FunctionData {
             }
             return items;
         }
-        unsigned nrOfItems() {
+        unsigned nrOfItems() const {
             return params.size();
         }
 };
@@ -145,7 +142,7 @@ public:
         rewriter.setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
     }
 
-    // We need to rewrite calls to these reorered functions.
+    // We need to rewrite calls to these reordered functions.
     bool VisitCallExpr(clang::CallExpr* CE);
 
     // We want to investigate FunctionDecl's.

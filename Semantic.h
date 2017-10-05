@@ -21,12 +21,24 @@
 #include <string>
 
 class Reordering {
-  protected:
-    virtual ~Reordering() {}
-  public:
-    std::string baseDirectory;
-    std::string outputPrefix;
-    Reordering(const std::string& bd, const std::string& od) : baseDirectory(bd), outputPrefix(od + "version_") {}
+    protected:
+        virtual ~Reordering() {}
+    public:
+        std::string baseDirectory;
+        std::string outputPrefix;
+        Reordering(const std::string& bd, const std::string& od) : baseDirectory(bd), outputPrefix(od + "version_") {}
+};
+
+class TargetData {
+    protected:
+        virtual ~TargetData() {}
+    public:
+        bool valid;
+
+        TargetData(bool valid = true) : valid(valid) {}
+        virtual bool empty() const = 0;
+        virtual Json::Value getJSON(const std::vector<unsigned>& ordering) const = 0;
+        virtual unsigned nrOfItems() const = 0;
 };
 
 template <typename ReorderingType, typename AnalyserType>

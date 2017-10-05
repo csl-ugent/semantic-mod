@@ -12,8 +12,6 @@
 #include "clang/Rewrite/Frontend/Rewriters.h"
 #include "llvm/ADT/MapVector.h"
 
-#include "json.h"
-
 #include <string>
 
 class SwitchUnique {
@@ -46,19 +44,17 @@ class SwitchUnique {
         }
 };
 
-class SwitchData {
+class SwitchData : public TargetData {
     public:
-        bool valid;
-
-        SwitchData(bool valid = true) : valid(valid) {}
-        bool empty() {
+        SwitchData(bool valid = true) : TargetData(valid) {}
+        bool empty() const {
           return true;
         }
-        Json::Value getJSON(const std::vector<unsigned>& ordering) {
+        Json::Value getJSON(const std::vector<unsigned>& ordering) const {
             Json::Value items(Json::arrayValue);
             return items;
         }
-        unsigned nrOfItems() {
+        unsigned nrOfItems() const {
             return 0;
         }
 };
