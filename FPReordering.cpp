@@ -155,7 +155,7 @@ bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
 // Method used for the function parameter semantic transformation.
 void fpreordering(ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, const unsigned long numberOfReorderings) {
     // We run the analysis phase and get the valid candidates
-    FPReordering reordering(baseDirectory);
+    FPReordering reordering(baseDirectory, outputDirectory);
     Tool->run(new AnalysisFrontendActionFactory<FPReordering, FPReorderingAnalyser>(reordering));
     std::vector<FunctionUnique> candidates;
     for (const auto& it : reordering.candidates) {
@@ -204,9 +204,6 @@ void fpreordering(ClangTool* Tool, std::string baseDirectory, std::string output
     llvm::outs() << "Writing analytics output...\n";
     writeJSONToFile(outputDirectory, -1, "analytics.json", analytics);
 
-    // Get the output prefix
-    std::string outputPrefix = outputDirectory + "function_r_";
-
     unsigned long amountChosen = 0;
     unsigned long amount = std::min(numberOfReorderings, totalReorderings);
     std::vector<FPTransformation> transformations;
@@ -254,7 +251,7 @@ void fpreordering(ClangTool* Tool, std::string baseDirectory, std::string output
         output["modified"]["items"] = reordering.candidates[chosen].getJSON(ordering);// We output the modified order.
 
         // We write some information regarding the performed transformations to output.
-        writeJSONToFile(outputPrefix, amountChosen+1, "transformations.json", output);
+        writeJSONToFile(reordering.outputPrefix, amountChosen+1, "transformations.json", output);
 
         // Add the transformation
         transformations.emplace_back(chosen, ordering);
@@ -267,6 +264,6 @@ void fpreordering(ClangTool* Tool, std::string baseDirectory, std::string output
         // We select the current transformation
         reordering.transformation = &transformations[iii];
 
-        Tool->run(new RewritingFrontendActionFactory<FPReordering, FPReorderingRewriter>(reordering, iii + 1, outputPrefix));
+        Tool->run(new RewritingFrontendActionFactory<FPReordering, FPReorderingRewriter>(reordering, iii + 1));
     }
 }

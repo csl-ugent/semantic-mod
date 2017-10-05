@@ -133,7 +133,7 @@ bool StructReorderingRewriter::VisitRecordDecl(clang::RecordDecl* D) {
 // Method used for the structreordering semantic transformation.
 void structReordering(ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings) {
     // We run the analysis phase.
-    StructReordering reordering(baseDirectory);
+    StructReordering reordering(baseDirectory, outputDirectory);
     Tool->run(new AnalysisFrontendActionFactory<StructReordering, StructReorderingAnalyser>(reordering));
     std::vector<StructUnique> candidates;
     for (const auto& it : reordering.candidates) {
@@ -168,9 +168,6 @@ void structReordering(ClangTool* Tool, std::string baseDirectory, std::string ou
     llvm::outs() << "Total reorderings possible with " << candidates.size() << " structs.\n";
     llvm::outs() << "Writing analytics output...\n";
     writeJSONToFile(outputDirectory, -1, "analytics.json", analytics);
-
-    // Get the output prefix
-    std::string outputPrefix = outputDirectory + "struct_r_";
 
     // We choose the amount of configurations of this struct that is required.
     unsigned long amount = amountOfReorderings;
@@ -244,7 +241,7 @@ void structReordering(ClangTool* Tool, std::string baseDirectory, std::string ou
         output["modified"]["fields"] = modified;
 
         // We write some information regarding the performed transformations to output.
-        writeJSONToFile(outputPrefix, amountChosen+1, "transformations.json", output);
+        writeJSONToFile(reordering.outputPrefix, amountChosen+1, "transformations.json", output);
 
         // Add the transformation
         transformations.emplace_back(chosen, ordering);
@@ -258,6 +255,6 @@ void structReordering(ClangTool* Tool, std::string baseDirectory, std::string ou
         StructTransformation* transformation = &transformations[iii];
         reordering.transformation = transformation;
 
-        Tool->run(new RewritingFrontendActionFactory<StructReordering, StructReorderingRewriter>(reordering, iii + 1, outputPrefix));
+        Tool->run(new RewritingFrontendActionFactory<StructReordering, StructReorderingRewriter>(reordering, iii + 1));
     }
 }

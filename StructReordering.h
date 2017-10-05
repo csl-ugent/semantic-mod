@@ -90,7 +90,7 @@ struct StructTransformation {
 
 class StructReordering : public Reordering {
 public:
-    explicit StructReordering(const std::string& bd) : Reordering(bd) {}
+    explicit StructReordering(const std::string& bd, const std::string& od) : Reordering(bd, od) {}
 
     // Map containing all information regarding candidates.
     llvm::MapVector<StructUnique, StructData, std::map<StructUnique, unsigned>> candidates;

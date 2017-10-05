@@ -64,7 +64,7 @@ struct SwitchTransformation {
 
 class SWCReordering : public Reordering {
 public:
-    explicit SWCReordering(const std::string& bd) : Reordering(bd) {}
+    explicit SWCReordering(const std::string& bd, const std::string& od) : Reordering(bd, od) {}
 
     // Map containing all information regarding candidates.
     llvm::MapVector<SwitchUnique, SwitchData, std::map<SwitchUnique, unsigned>> candidates;

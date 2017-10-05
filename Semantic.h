@@ -20,7 +20,8 @@ class Reordering {
     virtual ~Reordering() {}
   public:
     std::string baseDirectory;
-    Reordering(const std::string& bd) : baseDirectory(bd) {}
+    std::string outputPrefix;
+    Reordering(const std::string& bd, const std::string& od) : baseDirectory(bd), outputPrefix(od + "version_") {}
 };
 
 template <typename ReorderingType, typename AnalyserType>
@@ -87,10 +88,9 @@ class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFact
         ReorderingType& reordering;
         clang::Rewriter rewriter;
         int version;
-        std::string outputPrefix;
         public:
-        explicit RewritingFrontendAction(ReorderingType& reordering, int version, std::string outputPrefix)
-            : reordering(reordering), version(version), outputPrefix(outputPrefix) {}
+        explicit RewritingFrontendAction(ReorderingType& reordering, int version)
+            : reordering(reordering), version(version) {}
 
         void EndSourceFileAction() {
             // We obtain the filename.
@@ -108,7 +108,7 @@ class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFact
         void writeChangesToOutput() {
             // We construct the full output directory.
             std::stringstream s;
-            s << this->outputPrefix << "v" << this->version;
+            s << reordering.outputPrefix << "v" << this->version;
             std::string fullPath = s.str();
 
             // Debug
@@ -163,16 +163,15 @@ class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFact
 private:
     ReorderingType& reordering;
     int version;
-    std::string outputPrefix;
 
 public:
-    RewritingFrontendActionFactory(ReorderingType& reordering, int version, std::string outputPrefix)
-        : reordering(reordering), version(version), outputPrefix(outputPrefix) {}
+    RewritingFrontendActionFactory(ReorderingType& reordering, int version)
+        : reordering(reordering), version(version) {}
 
     // We create a new instance of the frontend action.
     clang::FrontendAction* create() {
         llvm::outs() << "Phase 2: performing rewrite for version: " << version << " target name: " << reordering.transformation->target.getName() << "\n";
-        return new RewritingFrontendAction(reordering, version, outputPrefix);
+        return new RewritingFrontendAction(reordering, version);
     }
 };
 #endif

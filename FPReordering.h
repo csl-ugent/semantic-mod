@@ -107,7 +107,7 @@ struct FPTransformation {
 // Function parameter reordering semantic modification.
 class FPReordering : public Reordering {
 public:
-    explicit FPReordering(const std::string& bd) : Reordering(bd) {}
+    explicit FPReordering(const std::string& bd, const std::string& od) : Reordering(bd, od) {}
 
     // Map containing all information regarding different functions.
     llvm::MapVector<FunctionUnique, FunctionData, std::map<FunctionUnique, unsigned>> candidates;
