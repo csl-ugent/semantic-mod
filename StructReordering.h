@@ -55,14 +55,14 @@ class StructUnique {
         }
 };
 
-struct StructField {
+class StructData {
+    struct StructField {
         std::string name;
         std::string type;
 
         StructField(std::string name, std::string type) : name(name), type(type) {}
-};
+    };
 
-class StructData {
     public:
         bool valid;
         std::vector<StructField> fields;
@@ -77,6 +77,21 @@ class StructData {
         }
         bool empty() {
           return fields.empty();
+        }
+        Json::Value getJSON(const std::vector<unsigned>& ordering) {
+            Json::Value items(Json::arrayValue);
+            for (unsigned iii = 0; iii < fields.size(); iii++) {
+                const StructField& param = fields[ordering[iii]];
+                Json::Value v;
+                v["position"] = iii;
+                v["name"] = param.name;
+                v["type"] = param.type;
+                items.append(v);
+            }
+            return items;
+        }
+        unsigned nrOfItems() {
+            return fields.size();
         }
 };
 
@@ -103,9 +118,6 @@ public:
     // The transformation to apply
     StructTransformation* transformation;
 };
-
-// Declaration of used methods.
-void structReordering(clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);
 
 // Semantic analyser, willl analyse different nodes within the AST.
 class StructReorderingAnalyser : public clang::RecursiveASTVisitor<StructReorderingAnalyser> {
@@ -138,5 +150,7 @@ public:
     // We want to investigate top-level things.
     bool VisitRecordDecl(clang::RecordDecl* D);
 };
+
+void structReordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings);
 
 #endif

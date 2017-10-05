@@ -12,6 +12,8 @@
 #include "clang/Rewrite/Frontend/Rewriters.h"
 #include "llvm/ADT/MapVector.h"
 
+#include "json.h"
+
 #include <string>
 
 class SwitchUnique {
@@ -52,6 +54,13 @@ class SwitchData {
         bool empty() {
           return true;
         }
+        Json::Value getJSON(const std::vector<unsigned>& ordering) {
+            Json::Value items(Json::arrayValue);
+            return items;
+        }
+        unsigned nrOfItems() {
+            return 0;
+        }
 };
 
 // Struct which describes the transformation
@@ -77,9 +86,6 @@ public:
     // The transformation to apply
     SwitchTransformation* transformation;
 };
-
-// Declaration of used methods.
-void swcreordering(clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, int amountOfReorderings);
 
 // Semantic analyser, willl analyse different nodes within the AST.
 class SWCReorderingAnalyser : public clang::RecursiveASTVisitor<SWCReorderingAnalyser> {
@@ -110,5 +116,7 @@ public:
     // We want to rewrite switch statements.
     bool VisitSwitchStmt(clang::SwitchStmt* CS);
 };
+
+void swcreordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings);
 
 #endif

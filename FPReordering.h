@@ -9,16 +9,12 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/Rewriters.h"
-#include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/MapVector.h"
 
 #include "json.h"
 
 #include <cstdlib>
 #include <string>
-
-// Declaration of used methods.
-void fpreordering(clang::tooling::ClangTool* Tool, std::string baseDirectory, std::string outputDirectory, const unsigned long amountOfReorderings);
 
 class FunctionUnique {
         std::string name;
@@ -155,5 +151,7 @@ public:
     // We want to investigate FunctionDecl's.
     bool VisitFunctionDecl(clang::FunctionDecl* D);
 };
+
+void fpreordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings);
 
 #endif
