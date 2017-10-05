@@ -1,4 +1,5 @@
 #include "SWCReordering.h"
+#include "SWCVisitor.h"
 #include "SemanticUtil.h"
 
 using namespace clang;

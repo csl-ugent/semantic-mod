@@ -1,4 +1,5 @@
 #include "FPReordering.h"
+#include "FPVisitor.h"
 #include "SemanticUtil.h"
 
 #include <string>

@@ -1,4 +1,5 @@
 #include "StructReordering.h"
+#include "StructVisitor.h"
 #include "SemanticUtil.h"
 
 #include <iterator>
