@@ -104,7 +104,7 @@ bool StructReorderingRewriter::VisitRecordDecl(clang::RecordDecl* D) {
     // We make sure the record is a struct and a definition.
     if (D->isStruct() && D->isThisDeclarationADefinition()) {
         // Check if this is a declaration for the struct that is to be reordered
-        const StructTransformation* transformation = reordering.transformation;
+        const Transformation* transformation = reordering.transformation;
         const StructUnique target(D, astContext);
         if (transformation->target == target) {
             llvm::outs() << "Declaration of: " << target.getName() << " has to be rewritten!\n";
@@ -128,5 +128,5 @@ bool StructReorderingRewriter::VisitRecordDecl(clang::RecordDecl* D) {
 
 // Method used for the structreordering semantic transformation.
 void structReordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings) {
-    reorder<StructReordering, StructReorderingAnalyser, StructReorderingRewriter, StructUnique, StructTransformation>(Tool, baseDirectory, outputDirectory, numberOfReorderings);
+    reorder<StructReordering, StructReorderingAnalyser, StructReorderingRewriter, StructUnique>(Tool, baseDirectory, outputDirectory, numberOfReorderings);
 }

@@ -13,15 +13,6 @@
 #include <sstream>
 #include <string>
 
-class Reordering {
-    protected:
-        virtual ~Reordering() {}
-    public:
-        std::string baseDirectory;
-        std::string outputPrefix;
-        Reordering(const std::string& bd, const std::string& od) : baseDirectory(bd), outputPrefix(od + "version_") {}
-};
-
 class TargetUnique {
     protected:
         virtual ~TargetUnique() {}
@@ -72,8 +63,26 @@ class TargetData {
         virtual unsigned nrOfItems() const = 0;
 };
 
+// Struct which describes the transformation
+struct Transformation {
+    const TargetUnique& target;
+    const std::vector<unsigned> ordering;
+    Transformation(const TargetUnique& target, const std::vector<unsigned>& ordering)
+        : target(target), ordering(ordering) {}
+};
+
+class Reordering {
+    protected:
+        virtual ~Reordering() {}
+    public:
+        std::string baseDirectory;
+        std::string outputPrefix;
+        Transformation* transformation;// The transformation to apply
+        Reordering(const std::string& bd, const std::string& od) : baseDirectory(bd), outputPrefix(od + "version_") {}
+};
+
 // Method used for the function parameter semantic transformation.
-template <typename ReorderingType, typename AnalyserType, typename RewriterType, typename TargetUnique, typename Transformation>
+template <typename ReorderingType, typename AnalyserType, typename RewriterType, typename TargetUnique>
 void reorder(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings) {
     // We run the analysis phase and get the valid candidates
     ReorderingType reordering(baseDirectory, outputDirectory);

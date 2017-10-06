@@ -98,7 +98,7 @@ bool FPReorderingRewriter::VisitCallExpr(clang::CallExpr* CE) {
     // We try to get the callee of this function call.
     if (FunctionDecl* FD = CE->getDirectCallee()) {
         // We check if this function is to be reordered
-        const FPTransformation* transformation = reordering.transformation;
+        const Transformation* transformation = reordering.transformation;
         const FunctionUnique target(FD, astContext);
         if (transformation->target == target) {
             llvm::outs() << "Call to function: " << FD->getNameAsString() << " has to be rewritten!\n";
@@ -123,7 +123,7 @@ bool FPReorderingRewriter::VisitCallExpr(clang::CallExpr* CE) {
 // AST rewriter, used for rewriting source code.
 bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
     // Check if this is a declaration for the function that is to be reordered
-    const FPTransformation* transformation = reordering.transformation;
+    const Transformation* transformation = reordering.transformation;
     FunctionUnique target(FD, astContext);
     if (transformation->target == target) {
         llvm::outs() << "Rewriting function: " << FD->getNameAsString() << " definition: " << FD->isThisDeclarationADefinition() << "\n";
@@ -147,5 +147,5 @@ bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
 }
 
 void fpreordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings) {
-    reorder<FPReordering, FPReorderingAnalyser, FPReorderingRewriter, FunctionUnique, FPTransformation>(Tool, baseDirectory, outputDirectory, numberOfReorderings);
+    reorder<FPReordering, FPReorderingAnalyser, FPReorderingRewriter, FunctionUnique>(Tool, baseDirectory, outputDirectory, numberOfReorderings);
 }

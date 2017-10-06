@@ -30,14 +30,6 @@ class SwitchData : public TargetData {
         }
 };
 
-// Struct which describes the transformation
-struct SwitchTransformation {
-    SwitchUnique target;
-    std::vector<unsigned> ordering;
-    SwitchTransformation(SwitchUnique target, std::vector<unsigned>& ordering)
-        : target(target), ordering(ordering) {}
-};
-
 class SWCReordering : public Reordering {
 public:
     explicit SWCReordering(const std::string& bd, const std::string& od) : Reordering(bd, od) {}
@@ -49,9 +41,6 @@ public:
         SwitchData& data = candidates[candidate];
         data.valid = false;
     }
-
-    // The transformation to apply
-    SwitchTransformation* transformation;
 };
 
 void swcreordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings);

@@ -62,14 +62,6 @@ class StructData : public TargetData {
         }
 };
 
-// Struct which describes the transformation
-struct StructTransformation {
-    StructUnique target;
-    std::vector<unsigned> ordering;
-    StructTransformation(StructUnique target, std::vector<unsigned>& ordering)
-        : target(target), ordering(ordering) {}
-};
-
 class StructReordering : public Reordering {
 public:
     explicit StructReordering(const std::string& bd, const std::string& od) : Reordering(bd, od) {}
@@ -81,9 +73,6 @@ public:
         StructData& data = candidates[candidate];
         data.valid = false;
     }
-
-    // The transformation to apply
-    StructTransformation* transformation;
 };
 
 void structReordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings);

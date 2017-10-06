@@ -54,14 +54,6 @@ class FunctionData : public TargetData {
         }
 };
 
-// Struct which describes the transformation
-struct FPTransformation {
-    FunctionUnique target;
-    std::vector<unsigned> ordering;
-    FPTransformation(FunctionUnique target, std::vector<unsigned>& ordering)
-        : target(target), ordering(ordering) {}
-};
-
 // Function parameter reordering semantic modification.
 class FPReordering : public Reordering {
 public:
@@ -74,9 +66,6 @@ public:
         FunctionData& data = candidates[candidate];
         data.valid = false;
     }
-
-    // The transformation to apply
-    FPTransformation* transformation;
 };
 
 void fpreordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings);
