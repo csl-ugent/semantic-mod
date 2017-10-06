@@ -13,6 +13,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <utility>
 
 class TargetUnique {
     protected:
@@ -91,17 +92,17 @@ class Reordering {
 };
 
 // Method used for the function parameter semantic transformation.
-template <typename ReorderingType, typename AnalyserType, typename RewriterType, typename TargetUnique>
+template <typename ReorderingType, typename AnalyserType, typename RewriterType>
 void reorder(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings) {
     // We run the analysis phase and get the valid candidates
     ReorderingType reordering(baseDirectory, outputDirectory);
     Tool->run(new AnalysisFrontendActionFactory<ReorderingType, AnalyserType>(reordering));
-    std::vector<TargetUnique> candidates;
+    std::vector<std::pair<const TargetUnique&, const TargetData&>> candidates;
     for (const auto& it : reordering.candidates) {
         if (it.second.valid)
         {
             llvm::outs() << "Valid candidate: " << it.first.getName() << "\n";
-            candidates.push_back(it.first);
+            candidates.emplace_back(it);
         }
     }
 
@@ -111,7 +112,7 @@ void reorder(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, 
     unsigned long totalReorderings = 0;
     double avgItems = 0;
     for (const auto& candidate : candidates) {
-        unsigned nrOfItems = reordering.candidates[candidate].nrOfItems();
+        unsigned nrOfItems = candidate.second.nrOfItems();
 
         // Keep count of the total possible reorderings and the average number of items
         totalReorderings += factorial(nrOfItems);
@@ -153,14 +154,14 @@ void reorder(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, 
         const auto& chosen = candidates[random_0_to_n(candidates.size())];
 
         // Create original ordering
-        std::vector<unsigned> ordering(reordering.candidates[chosen].nrOfItems());
+        std::vector<unsigned> ordering(chosen.second.nrOfItems());
         std::iota(ordering.begin(), ordering.end(), 0);
 
         // Things we should write to an output file.
         Json::Value output;
-        output["target_name"] = chosen.getName();
-        output["file_name"] = chosen.getFileName();
-        output["original"]["items"] = reordering.candidates[chosen].getJSON(ordering);// We output the original order.
+        output["target_name"] = chosen.first.getName();
+        output["file_name"] = chosen.first.getFileName();
+        output["original"]["items"] = chosen.second.getJSON(ordering);// We output the original order.
 
         // Make sure the modified ordering isn't the same as the original
         std::vector<unsigned> original_ordering = ordering;
@@ -171,7 +172,7 @@ void reorder(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, 
         // Check if this transformation isn't duplicate. If it is, we try again
         bool found = false;
         for (const auto& t : transformations) {
-            if (t.target == chosen && t.ordering == ordering) {
+            if (t.target == chosen.first && t.ordering == ordering) {
                 found = true;
                 break;
             }
@@ -180,20 +181,20 @@ void reorder(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, 
             continue;
 
         // Debug information.
-        llvm::outs() << "Chosen target: " << chosen.getName() << "\n";
+        llvm::outs() << "Chosen target: " << chosen.first.getName() << "\n";
         llvm::outs() << "Chosen ordering: " << "\n";
         for (auto it : ordering) {
             llvm::outs() << it << " ";
         }
         llvm::outs() << "\n";
 
-        output["modified"]["items"] = reordering.candidates[chosen].getJSON(ordering);// We output the modified order.
+        output["modified"]["items"] = chosen.second.getJSON(ordering);// We output the modified order.
 
         // We write some information regarding the performed transformations to output.
         writeJSONToFile(reordering.outputPrefix, amountChosen+1, "transformations.json", output);
 
         // Add the transformation
-        transformations.emplace_back(chosen, ordering);
+        transformations.emplace_back(chosen.first, ordering);
         amountChosen++;
     }
 

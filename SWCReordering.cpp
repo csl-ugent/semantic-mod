@@ -39,5 +39,5 @@ bool SWCReorderingRewriter::VisitSwitchStmt(clang::SwitchStmt* CS) {
 }
 
 void swcreordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings) {
-    reorder<SWCReordering, SWCReorderingAnalyser, SWCReorderingRewriter, SwitchUnique>(Tool, baseDirectory, outputDirectory, numberOfReorderings);
+    reorder<SWCReordering, SWCReorderingAnalyser, SWCReorderingRewriter>(Tool, baseDirectory, outputDirectory, numberOfReorderings);
 }
