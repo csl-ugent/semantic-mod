@@ -15,6 +15,7 @@
 #include <string>
 #include <utility>
 
+// This class describes a possible target for reordering uniquely
 class TargetUnique {
     protected:
         virtual ~TargetUnique() {}
@@ -53,6 +54,7 @@ class TargetUnique {
         }
 };
 
+// This class describes the data associated to a reordering target
 class TargetData {
     protected:
         virtual ~TargetData() {}
@@ -65,7 +67,7 @@ class TargetData {
         virtual unsigned nrOfItems() const = 0;
 };
 
-// Struct which describes the transformation
+// This struct describes a transformation
 struct Transformation {
     const TargetUnique& target;
     const std::vector<unsigned> ordering;
@@ -73,6 +75,7 @@ struct Transformation {
         : target(target), ordering(ordering) {}
 };
 
+// This class contains the data used during the generating of reordered versions
 template <typename TargetUnique, typename TargetData>
 class Reordering {
     protected:
@@ -91,7 +94,7 @@ class Reordering {
         }
 };
 
-// Method used for the function parameter semantic transformation.
+// Method used generating reordered versions
 template <typename ReorderingType, typename AnalyserType, typename RewriterType>
 void reorder(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings) {
     // We run the analysis phase and get the valid candidates

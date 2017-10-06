@@ -54,7 +54,6 @@ class FunctionData : public TargetData {
         }
 };
 
-// Function parameter reordering semantic modification.
 class FPReordering : public Reordering<FunctionUnique, FunctionData> {
 public:
     explicit FPReordering(const std::string& bd, const std::string& od) : Reordering(bd, od) {}
