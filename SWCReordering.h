@@ -9,34 +9,10 @@
 
 #include <string>
 
-class SwitchUnique {
-        std::string name;
-        std::string fileName;
-
+class SwitchUnique : public TargetUnique {
     public:
-        SwitchUnique(const clang::SwitchStmt* D, const clang::ASTContext& astContext) {}
-        std::string getName() const { return name;}
-        std::string getFileName() const { return fileName;}
-        bool operator== (const SwitchUnique& other) const
-        {
-            // If the names differ, it can't be the same
-            if (name != other.name)
-                return false;
-
-            // If both are local, yet from a different file, they are different
-            if (fileName != other.fileName)
-                return false;
-
-            return true;
-        }
-        bool operator< (const SwitchUnique& other) const
-        {
-            // Create string representation so we can correctly compare
-            std::string left = name + ":" + fileName;
-            std::string right = other.name + ":" + other.fileName;
-
-            return left < right;
-        }
+        SwitchUnique(const clang::SwitchStmt* D, const clang::ASTContext& astContext)
+            : TargetUnique("", "") {}
 };
 
 class SwitchData : public TargetData {

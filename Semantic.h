@@ -22,6 +22,44 @@ class Reordering {
         Reordering(const std::string& bd, const std::string& od) : baseDirectory(bd), outputPrefix(od + "version_") {}
 };
 
+class TargetUnique {
+    protected:
+        virtual ~TargetUnique() {}
+        std::string name;
+        std::string fileName;
+        bool global;
+
+    public:
+        TargetUnique(const std::string& name, const std::string& fileName, bool global = false)
+            : name(name), fileName(fileName), global(global) {}
+        std::string getName() const { return name;}
+        std::string getFileName() const { return fileName;}
+        bool operator== (const TargetUnique& other) const
+        {
+            // If the names differ, it can't be the same
+            if (name != other.name)
+                return false;
+
+            // If one of the two is global and the other isn't, it can't be the same
+            if (global ^ other.global)
+                return false;
+
+            // If both are local, yet from a different file, they are different
+            if ((!global && !other.global) && (fileName != other.fileName))
+                return false;
+
+            return true;
+        }
+        bool operator< (const TargetUnique& other) const
+        {
+            // Create string representations so we can correctly compare
+            std::string left = global ? name : name + ":" + fileName;
+            std::string right = other.global ? other.name : other.name + ":" + other.fileName;
+
+            return left < right;
+        }
+};
+
 class TargetData {
     protected:
         virtual ~TargetData() {}

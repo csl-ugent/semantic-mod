@@ -9,40 +9,10 @@
 
 #include <string>
 
-class FunctionUnique {
-        std::string name;
-        std::string fileName;
-        bool global;
-
+class FunctionUnique : public TargetUnique {
     public:
         FunctionUnique(const clang::FunctionDecl* D, const clang::ASTContext& astContext)
-            : name(D->getNameAsString()), fileName(astContext.getSourceManager().getFilename(D->getLocation()).str()), global(D->isGlobal()) {}
-        std::string getName() const { return name;}
-        std::string getFileName() const { return fileName;}
-        bool operator== (const FunctionUnique& function) const
-        {
-            // If the names differ, it can't be the same function
-            if (name != function.name)
-                return false;
-
-            // If one of the two is global and the other isn't, it can't be the same function
-            if (global ^ function.global)
-                return false;
-
-            // If both functions are local, yet from a different file, they are different
-            if ((!global && !function.global) && (fileName != function.fileName))
-                return false;
-
-            return true;
-        }
-        bool operator< (const FunctionUnique& function) const
-        {
-            // Create string representation of the functions so we can correctly compare
-            std::string left = global ? name : name + ":" + fileName;
-            std::string right = function.global ? function.name : function.name + ":" + function.fileName;
-
-            return left < right;
-        }
+            : TargetUnique(D->getNameAsString(), astContext.getSourceManager().getFilename(D->getLocation()).str(), D->isGlobal()) {}
 };
 
 class FunctionData : public TargetData {

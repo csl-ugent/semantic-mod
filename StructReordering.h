@@ -9,44 +9,17 @@
 
 #include <string>
 
-class StructUnique {
-        std::string name;
-        std::string fileName;
-
+class StructUnique : public TargetUnique {
     public:
         StructUnique(const clang::RecordDecl* D, const clang::ASTContext& astContext)
-          : fileName(astContext.getSourceManager().getFilename(D->getLocation()).str())
+            : TargetUnique(D->getNameAsString(), astContext.getSourceManager().getFilename(D->getLocation()).str())
         {
-            name = D->getNameAsString();
-
             // If the struct does not have a name, try to get one from when it was used in a typedef
             if (name.empty()) {
                 if (const clang::TypedefNameDecl* T = D->getTypedefNameForAnonDecl()) {
                     name = T->getNameAsString();
                 }
             }
-        }
-        std::string getName() const { return name;}
-        std::string getFileName() const { return fileName;}
-        bool operator== (const StructUnique& other) const
-        {
-            // If the names differ, it can't be the same
-            if (name != other.name)
-                return false;
-
-            // If both are local, yet from a different file, they are different
-            if (fileName != other.fileName)
-                return false;
-
-            return true;
-        }
-        bool operator< (const StructUnique& other) const
-        {
-            // Create string representation so we can correctly compare
-            std::string left = name + ":" + fileName;
-            std::string right = other.name + ":" + other.fileName;
-
-            return left < right;
         }
 };
 
