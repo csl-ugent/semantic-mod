@@ -5,9 +5,9 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "llvm/ADT/MapVector.h"
 
 #include <string>
+#include <vector>
 
 class StructUnique : public TargetUnique {
     public:
@@ -62,17 +62,9 @@ class StructData : public TargetData {
         }
 };
 
-class StructReordering : public Reordering {
+class StructReordering : public Reordering<StructUnique, StructData> {
 public:
     explicit StructReordering(const std::string& bd, const std::string& od) : Reordering(bd, od) {}
-
-    // Map containing all information regarding candidates.
-    llvm::MapVector<StructUnique, StructData, std::map<StructUnique, unsigned>> candidates;
-    void invalidateCandidate(const StructUnique& candidate, const std::string& reason) {
-        llvm::outs() << "Invalidate candidate: " << candidate.getName() << ". Reason: " << reason << ".\n";
-        StructData& data = candidates[candidate];
-        data.valid = false;
-    }
 };
 
 void structReordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings);

@@ -5,6 +5,7 @@
 #include "SemanticUtil.h"
 
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/MapVector.h"
 
 #include "json.h"
 
@@ -71,6 +72,7 @@ struct Transformation {
         : target(target), ordering(ordering) {}
 };
 
+template <typename TargetUnique, typename TargetData>
 class Reordering {
     protected:
         virtual ~Reordering() {}
@@ -78,7 +80,14 @@ class Reordering {
         std::string baseDirectory;
         std::string outputPrefix;
         Transformation* transformation;// The transformation to apply
+        llvm::MapVector<TargetUnique, TargetData, std::map<TargetUnique, unsigned>> candidates;// Map containing all information regarding candidates.
         Reordering(const std::string& bd, const std::string& od) : baseDirectory(bd), outputPrefix(od + "version_") {}
+
+        void invalidateCandidate(const TargetUnique& candidate, const std::string& reason) {
+            llvm::outs() << "Invalidate candidate: " << candidate.getName() << ". Reason: " << reason << ".\n";
+            TargetData& data = candidates[candidate];
+            data.valid = false;
+        }
 };
 
 // Method used for the function parameter semantic transformation.

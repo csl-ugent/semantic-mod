@@ -5,9 +5,9 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "llvm/ADT/MapVector.h"
 
 #include <string>
+#include <vector>
 
 class FunctionUnique : public TargetUnique {
     public:
@@ -55,17 +55,9 @@ class FunctionData : public TargetData {
 };
 
 // Function parameter reordering semantic modification.
-class FPReordering : public Reordering {
+class FPReordering : public Reordering<FunctionUnique, FunctionData> {
 public:
     explicit FPReordering(const std::string& bd, const std::string& od) : Reordering(bd, od) {}
-
-    // Map containing all information regarding different functions.
-    llvm::MapVector<FunctionUnique, FunctionData, std::map<FunctionUnique, unsigned>> candidates;
-    void invalidateCandidate(const FunctionUnique& candidate, const std::string& reason) {
-        llvm::outs() << "Invalidate candidate: " << candidate.getName() << ". Reason: " << reason << ".\n";
-        FunctionData& data = candidates[candidate];
-        data.valid = false;
-    }
 };
 
 void fpreordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings);

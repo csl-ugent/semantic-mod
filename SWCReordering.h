@@ -5,7 +5,6 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "llvm/ADT/MapVector.h"
 
 #include <string>
 
@@ -30,17 +29,9 @@ class SwitchData : public TargetData {
         }
 };
 
-class SWCReordering : public Reordering {
+class SWCReordering : public Reordering<SwitchUnique, SwitchData> {
 public:
     explicit SWCReordering(const std::string& bd, const std::string& od) : Reordering(bd, od) {}
-
-    // Map containing all information regarding candidates.
-    llvm::MapVector<SwitchUnique, SwitchData, std::map<SwitchUnique, unsigned>> candidates;
-    void invalidateCandidate(const SwitchUnique& candidate, const std::string& reason) {
-        llvm::outs() << "Invalidate candidate: " << candidate.getName() << ". Reason: " << reason << ".\n";
-        SwitchData& data = candidates[candidate];
-        data.valid = false;
-    }
 };
 
 void swcreordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings);
