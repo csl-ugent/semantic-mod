@@ -130,7 +130,12 @@ class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFact
                         llvm::outs() << "Creating subdirectories..." << "\n";
                         std::string subdirectories = fileName.substr(0, fileName.find_last_of("/\\"));
                         llvm::outs() <<  "Extracted subdirectory path: " << subdirectories << "\n";
-                        system(("mkdir -p " + fullPath + "/" + subdirectories).c_str());
+                        const int dir_err = system(("mkdir -p " + fullPath + "/" + subdirectories).c_str());
+                        if (-1 == dir_err)
+                        {
+                            llvm::outs() << "Error creating directory!\n";
+                            return;
+                        }
                     }
                 }
 
