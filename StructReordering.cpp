@@ -87,7 +87,7 @@ bool StructReorderingAnalyser::VisitVarDecl(clang::VarDecl *D) {
 
     // We detect structs recursively and remove them from the struct map.
     // We don't support reordering structs that have global storage
-    // TODO: does this work?
+    // TODO: maybe only do this for read/write data?
     if (D->hasGlobalStorage())
         detectStructsRecursively(type);
 
