@@ -88,8 +88,12 @@ class Reordering {
         Reordering(const std::string& bd, const std::string& od) : baseDirectory(bd), outputPrefix(od + "version_") {}
 
         void invalidateCandidate(const TargetUnique& candidate, const std::string& reason) {
-            llvm::outs() << "Invalidate candidate: " << candidate.getName() << ". Reason: " << reason << ".\n";
+            // If the candidate is already invalid, just return
             TargetData& data = candidates[candidate];
+            if (!data.valid)
+                return;
+
+            llvm::outs() << "Invalidate candidate: " << candidate.getName() << ". Reason: " << reason << ".\n";
             data.valid = false;
         }
 };
