@@ -122,7 +122,7 @@ void reorder(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, 
         unsigned nrOfItems = candidate.second.nrOfItems();
 
         // Keep count of the total possible reorderings and the average number of items
-        totalReorderings += factorial(nrOfItems);
+        totalReorderings += factorial(nrOfItems) -1;// All permutations are possible reorderings, except for the original one.
         avgItems += nrOfItems;
 
         // Look if this amount has already occured or not.
