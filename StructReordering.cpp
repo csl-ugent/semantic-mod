@@ -91,11 +91,35 @@ bool StructReorderingAnalyser::VisitVarDecl(clang::VarDecl *D) {
     if (D->hasGlobalStorage())
         detectStructsRecursively(type);
 
-    // We check if the variable has an initializer.
-    // Initializer was actually an InitListExpr.
-    // TODO: is this right?
-    if (dyn_cast_or_null<InitListExpr>(D->getInit()))
-        detectStructsRecursively(type);
+    // We check if the variable has an initializer list. We can reorder structs that are
+    // initialized, but only for fully designated initializers.
+    InitListExpr* ILE = dyn_cast_or_null<InitListExpr>(D->getInit());
+    if (ILE)
+    {
+        // We want the syntactic form of the intitializer, as DesignatedInitExpr's
+        // aren't present in the semantic form anymore. So, if we are dealing with
+        // the semantic form, switch to syntactic.
+        if (ILE->isSemanticForm())
+            ILE = ILE->getSyntacticForm();
+
+        // Check if the initializer is fully designated. We want all fields to be
+        // initialized using designation.
+        // TODO: what if not all fields are presen in the list?
+        bool fully_designated_initializer = true;
+        for (auto IE : ILE->children())
+        {
+            if (!isa<DesignatedInitExpr>(IE))
+            {
+                fully_designated_initializer = false;
+                break;
+            }
+        }
+
+        // If the initialization is not fully designated, any structs inside are
+        // not supported.
+        if (!fully_designated_initializer)
+            detectStructsRecursively(type);
+    }
 
     return true;
 }
