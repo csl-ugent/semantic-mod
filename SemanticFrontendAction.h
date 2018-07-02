@@ -15,73 +15,73 @@
 #include <sstream>
 #include <string>
 
-template <typename ReorderingType, typename AnalyserType>
+template <typename VersionType, typename AnalyserType>
 class AnalysisFrontendActionFactory : public clang::tooling::FrontendActionFactory
 {
     class AnalysisFrontendAction : public clang::ASTFrontendAction {
         class AnalysisASTConsumer : public clang::ASTConsumer {
             private:
-                ReorderingType& reordering;
+                VersionType& version;
             public:
-                explicit AnalysisASTConsumer(ReorderingType& reordering)
-                    : reordering(reordering) { }
+                explicit AnalysisASTConsumer(VersionType& version)
+                    : version(version) { }
 
                 void HandleTranslationUnit(clang::ASTContext &Context) {
-                    AnalyserType visitor = AnalyserType(Context, reordering);
+                    AnalyserType visitor = AnalyserType(Context, version);
                     visitor.TraverseDecl(Context.getTranslationUnitDecl());
                 }
         };
 
         protected:
-        ReorderingType& reordering;
+        VersionType& version;
         public:
-        explicit AnalysisFrontendAction(ReorderingType& reordering)
-            : reordering(reordering) {}
+        explicit AnalysisFrontendAction(VersionType& version)
+            : version(version) {}
 
         std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(clang::CompilerInstance &CI, llvm::StringRef file) {
-            return llvm::make_unique<AnalysisASTConsumer>(reordering);
+            return llvm::make_unique<AnalysisASTConsumer>(version);
         }
     };
 
 protected:
-    ReorderingType& reordering;
+    VersionType& version;
 
 public:
-    AnalysisFrontendActionFactory(ReorderingType& reordering)
-        : reordering(reordering) {}
+    AnalysisFrontendActionFactory(VersionType& version)
+        : version(version) {}
 
     // We create a new instance of the frontend action.
     clang::FrontendAction* create() {
         llvm::outs() << "Phase 1: analysis\n";
-        return new AnalysisFrontendAction(reordering);
+        return new AnalysisFrontendAction(version);
     }
 };
 
-template <typename ReorderingType, typename RewriterType>
+template <typename VersionType, typename RewriterType>
 class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFactory
 {
     class RewritingFrontendAction : public clang::ASTFrontendAction {
         class RewritingASTConsumer : public clang::ASTConsumer {
             private:
-                ReorderingType& reordering;
+                VersionType& version;
                 clang::Rewriter& rewriter;
             public:
-                explicit RewritingASTConsumer(ReorderingType& reordering, clang::Rewriter& rewriter)
-                    : reordering(reordering), rewriter(rewriter) {}
+                explicit RewritingASTConsumer(VersionType& version, clang::Rewriter& rewriter)
+                    : version(version), rewriter(rewriter) {}
 
                 void HandleTranslationUnit(clang::ASTContext &Context) {
-                    RewriterType visitor = RewriterType(Context, reordering, rewriter);
+                    RewriterType visitor = RewriterType(Context, version, rewriter);
                     visitor.TraverseDecl(Context.getTranslationUnitDecl());
                 }
         };
 
         private:
-        ReorderingType& reordering;
+        VersionType& version;
         clang::Rewriter rewriter;
-        int version;
+        int id;
         public:
-        explicit RewritingFrontendAction(ReorderingType& reordering, int version)
-            : reordering(reordering), version(version) {}
+        explicit RewritingFrontendAction(VersionType& version, int id)
+            : version(version), id(id) {}
 
         void EndSourceFileAction() {
             // We obtain the filename.
@@ -99,7 +99,7 @@ class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFact
         void writeChangesToOutput() {
             // We construct the full output directory.
             std::stringstream s;
-            s << reordering.outputPrefix << "v" << this->version;
+            s << version.outputPrefix << "v" << this->id;
             std::string fullPath = s.str();
 
             // Debug
@@ -121,7 +121,7 @@ class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFact
                 llvm::StringRef fileNameRef = rewriter.getSourceMgr().getFileEntryForID(I->first)->getName();
                 std::string fileNameStr = std::string(fileNameRef.data());
                 llvm::outs() << "Obtained filename: " << fileNameStr << "\n";
-                std::string fileName = fileNameStr.substr(fileNameStr.find(reordering.baseDirectory) + reordering.baseDirectory.length()); /* until the end automatically... */
+                std::string fileName = fileNameStr.substr(fileNameStr.find(version.baseDirectory) + version.baseDirectory.length()); /* until the end automatically... */
 
                 // Optionally create required subdirectories.
                 {
@@ -152,22 +152,22 @@ class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFact
         }
 
         std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(clang::CompilerInstance &CI, llvm::StringRef file) {
-            return llvm::make_unique<RewritingASTConsumer>(reordering, rewriter);
+            return llvm::make_unique<RewritingASTConsumer>(version, rewriter);
         }
     };
 
 private:
-    ReorderingType& reordering;
-    int version;
+    VersionType& version;
+    int id;
 
 public:
-    RewritingFrontendActionFactory(ReorderingType& reordering, int version)
-        : reordering(reordering), version(version) {}
+    RewritingFrontendActionFactory(VersionType& version, int id)
+        : version(version), id(id) {}
 
     // We create a new instance of the frontend action.
     clang::FrontendAction* create() {
-        llvm::outs() << "Phase 2: performing rewrite for version: " << version << " target name: " << reordering.transformation->target.getName() << "\n";
-        return new RewritingFrontendAction(reordering, version);
+        llvm::outs() << "Phase 2: performing rewrite for version: " << id << " target name: " << version.transformation->target.getName() << "\n";
+        return new RewritingFrontendAction(version, id);
     }
 };
 

@@ -62,11 +62,11 @@ class StructData : public TargetData {
         }
 };
 
-class StructReordering : public Reordering<StructUnique, StructData> {
+class StructVersion : public Version<StructUnique, StructData> {
 public:
-    explicit StructReordering(const std::string& bd, const std::string& od) : Reordering(bd, od) {}
+    explicit StructVersion(const std::string& bd, const std::string& od) : Version(bd, od) {}
 };
 
-void structReordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings);
+void structReordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfVersions);
 
 #endif

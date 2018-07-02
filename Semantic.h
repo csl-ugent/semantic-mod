@@ -16,7 +16,7 @@
 #include <string>
 #include <utility>
 
-// This class describes a possible target for reordering uniquely
+// This class uniquely describes a possible target to transform
 class TargetUnique {
     protected:
         virtual ~TargetUnique() {}
@@ -55,7 +55,7 @@ class TargetUnique {
         }
 };
 
-// This class describes the data associated to a reordering target
+// This class describes the data associated to a target
 class TargetData {
     protected:
         virtual ~TargetData() {}
@@ -76,17 +76,17 @@ struct Transformation {
         : target(target), ordering(ordering) {}
 };
 
-// This class contains the data used during the generating of reordered versions
+// This class contains the data used during the generating of new versions
 template <typename TargetUnique, typename TargetData>
-class Reordering {
+class Version {
     protected:
-        virtual ~Reordering() {}
+        virtual ~Version() {}
     public:
         std::string baseDirectory;
         std::string outputPrefix;
         Transformation* transformation;// The transformation to apply
         llvm::MapVector<TargetUnique, TargetData, std::map<TargetUnique, unsigned>> candidates;// Map containing all information regarding candidates.
-        Reordering(const std::string& bd, const std::string& od) : baseDirectory(bd), outputPrefix(od + "version_") {}
+        Version(const std::string& bd, const std::string& od) : baseDirectory(bd), outputPrefix(od + "version_") {}
 
         void invalidateCandidate(const TargetUnique& candidate, const std::string& reason) {
             // If the candidate is already invalid, just return
@@ -99,14 +99,14 @@ class Reordering {
         }
 };
 
-// Method used generating reordered versions
-template <typename ReorderingType, typename AnalyserType, typename RewriterType>
-void reorder(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings) {
+// Method used to generate new versions
+template <typename VersionType, typename AnalyserType, typename RewriterType>
+void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfVersions) {
     // We run the analysis phase and get the valid candidates
-    ReorderingType reordering(baseDirectory, outputDirectory);
-    Tool->run(new AnalysisFrontendActionFactory<ReorderingType, AnalyserType>(reordering));
+    VersionType version(baseDirectory, outputDirectory);
+    Tool->run(new AnalysisFrontendActionFactory<VersionType, AnalyserType>(version));
     std::vector<std::pair<const TargetUnique&, const TargetData&>> candidates;
-    for (const auto& it : reordering.candidates) {
+    for (const auto& it : version.candidates) {
         if (it.second.valid)
         {
             llvm::outs() << "Valid candidate: " << it.first.getName() << "\n";
@@ -114,17 +114,17 @@ void reorder(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, 
         }
     }
 
-    // We need to determine the maximum amount of reorderings that is actually
+    // We need to determine the maximum number of versions that is actually
     // possible with the given input source files (based on the analysis phase).
     std::map<unsigned, unsigned> histogram;
-    unsigned long totalReorderings = 0;
-    double avgItems = 0;
+    unsigned long totalItems = 0;
+    unsigned long totalVersions = 0;
     for (const auto& candidate : candidates) {
         unsigned nrOfItems = candidate.second.nrOfItems();
 
-        // Keep count of the total possible reorderings and the average number of items
-        totalReorderings += factorial(nrOfItems) -1;// All permutations are possible reorderings, except for the original one.
-        avgItems += nrOfItems;
+        // Keep count of the total possible versions and the total number of items
+        totalVersions += factorial(nrOfItems) -1;// All permutations are possible versions, except for the original one.
+        totalItems += nrOfItems;
 
         // Look if this amount has already occured or not.
         if (histogram.find(nrOfItems) != histogram.end()) {
@@ -137,8 +137,8 @@ void reorder(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, 
     // Create analytics
     Json::Value analytics;
     analytics["number_of_candidates"] = candidates.size();
-    analytics["avg_items"] = avgItems / candidates.size();
-    analytics["entropy"] = entropyEquiprobable(totalReorderings);
+    analytics["avg_items"] = totalItems / candidates.size();
+    analytics["entropy"] = entropyEquiprobable(totalVersions);
 
     // Add histogram.
     for (const auto& it : histogram) {
@@ -148,15 +148,14 @@ void reorder(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, 
     }
 
     // Output analytics
-    llvm::outs() << "Total number of reorderings possible with " << candidates.size() << " candidates is: " << totalReorderings << "\n";
     llvm::outs() << "Writing analytics output...\n";
     writeJSONToFile(outputDirectory, -1, "analytics.json", analytics);
 
-    unsigned long amountChosen = 0;
-    unsigned long amount = std::min(numberOfReorderings, totalReorderings);
+    unsigned long actualNumberOfVersions = std::min(numberOfVersions, totalVersions);
     std::vector<Transformation> transformations;
-    llvm::outs() << "Amount of reorderings is set to: " << amount << "\n";
-    while (amountChosen < amount)
+    llvm::outs() << "Total number of versions possible with " << candidates.size() << " candidates is: " << totalVersions << "\n";
+    llvm::outs() << "The actual number of versions is set to: " << actualNumberOfVersions << "\n";
+    for (unsigned long versionId = 0; versionId < actualNumberOfVersions; versionId++)
     {
         // We choose a candidate at random.
         const auto& chosen = candidates[random_0_to_n(candidates.size())];
@@ -199,20 +198,19 @@ void reorder(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, 
         output["modified"]["items"] = chosen.second.getJSON(ordering);// We output the modified order.
 
         // We write some information regarding the performed transformations to output.
-        writeJSONToFile(reordering.outputPrefix, amountChosen+1, "transformations.json", output);
+        writeJSONToFile(version.outputPrefix, versionId + 1, "transformations.json", output);
 
         // Add the transformation
         transformations.emplace_back(chosen.first, ordering);
-        amountChosen++;
     }
 
     // We perform the rewrite operations.
-    for (unsigned long iii = 0; iii < amount; iii++)
+    for (unsigned long iii = 0; iii < actualNumberOfVersions; iii++)
     {
         // We select the current transformation
-        reordering.transformation = &transformations[iii];
+        version.transformation = &transformations[iii];
 
-        Tool->run(new RewritingFrontendActionFactory<ReorderingType, RewriterType>(reordering, iii + 1));
+        Tool->run(new RewritingFrontendActionFactory<VersionType, RewriterType>(version, iii + 1));
     }
 }
 

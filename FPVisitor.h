@@ -3,13 +3,13 @@
 #include "clang/AST/Decl.h"
 
 // Semantic analyser, willl analyse different nodes within the AST.
-class FPReorderingAnalyser : public clang::RecursiveASTVisitor<FPReorderingAnalyser> {
+class FPAnalyser : public clang::RecursiveASTVisitor<FPAnalyser> {
 private:
     clang::ASTContext& astContext; // Used for getting additional AST info.
-    FPReordering& reordering;
+    FPVersion& version;
 public:
-    explicit FPReorderingAnalyser(clang::ASTContext& Context, FPReordering& reordering)
-      : astContext(Context), reordering(reordering) { }
+    explicit FPAnalyser(clang::ASTContext& Context, FPVersion& version)
+      : astContext(Context), version(version) { }
 
     // We want to investigate Function declarations and invocations
     bool VisitBinaryOperator(clang::BinaryOperator* DRE);
@@ -21,11 +21,11 @@ public:
 class FPReorderingRewriter : public clang::RecursiveASTVisitor<FPReorderingRewriter> {
 private:
     clang::ASTContext& astContext; // Used for getting additional AST info.
-    FPReordering& reordering;
+    FPVersion& version;
     clang::Rewriter& rewriter;
 public:
-    explicit FPReorderingRewriter(clang::ASTContext& Context, FPReordering& reordering, clang::Rewriter& rewriter)
-      : astContext(Context), reordering(reordering), rewriter(rewriter)
+    explicit FPReorderingRewriter(clang::ASTContext& Context, FPVersion& version, clang::Rewriter& rewriter)
+      : astContext(Context), version(version), rewriter(rewriter)
     {
         rewriter.setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
     }

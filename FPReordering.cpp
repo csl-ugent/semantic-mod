@@ -8,7 +8,7 @@ using namespace clang;
 using namespace llvm;
 
 // We use this visitor to check for function pointers. If a pointer to a function is assigned, we invalidate the function
-bool FPReorderingAnalyser::VisitBinaryOperator(clang::BinaryOperator* BE) {
+bool FPAnalyser::VisitBinaryOperator(clang::BinaryOperator* BE) {
     if (BE->isAssignmentOp())
     {
         // Check if the RHS is a DeclRefExpr
@@ -23,28 +23,28 @@ bool FPReorderingAnalyser::VisitBinaryOperator(clang::BinaryOperator* BE) {
                 const std::string& fileName = candidate.getFileName();
 
                 // We make sure the file is contained in our base directory...
-                if (fileName.find(reordering.baseDirectory) == std::string::npos)
+                if (fileName.find(version.baseDirectory) == std::string::npos)
                     return true;
 
-                reordering.invalidateCandidate(candidate, "function is assigned as a pointer");
+                version.invalidateCandidate(candidate, "function is assigned as a pointer");
             }
         }
     }
     return true;
 }
 
-bool FPReorderingAnalyser::VisitCallExpr(clang::CallExpr* CE) {
+bool FPAnalyser::VisitCallExpr(clang::CallExpr* CE) {
     FunctionDecl* FD = CE->getDirectCallee();
     if (FD) {
         const FunctionUnique candidate(FD, astContext);
         const std::string& fileName = candidate.getFileName();
 
         // We make sure the file is contained in our base directory...
-        if (fileName.find(reordering.baseDirectory) == std::string::npos)
+        if (fileName.find(version.baseDirectory) == std::string::npos)
             return true;
 
         if (CE->getLocStart().isMacroID()) // Invalidate the function if it's in a macro.
-            reordering.invalidateCandidate(candidate, "function is used in a macro");
+            version.invalidateCandidate(candidate, "function is used in a macro");
         else
         {
             // Check if any of the argument expression has side effects. In this case we invalidate the function.
@@ -55,7 +55,7 @@ bool FPReorderingAnalyser::VisitCallExpr(clang::CallExpr* CE) {
                 auto arg = CE->getArg(iii);
                 if (arg->HasSideEffects(astContext, true))
                 {
-                    reordering.invalidateCandidate(candidate, "in one of the function invocations, one of the arguments has side effects");
+                    version.invalidateCandidate(candidate, "in one of the function invocations, one of the arguments has side effects");
                     break;
                 }
             }
@@ -66,7 +66,7 @@ bool FPReorderingAnalyser::VisitCallExpr(clang::CallExpr* CE) {
 }
 
 // AST visitor, used for analysis.
-bool FPReorderingAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
+bool FPAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
     // We make sure we iterate over the definition.
     if (FD->isThisDeclarationADefinition()) {
         // If we haven't already selected the function, check if the function is eligible:
@@ -78,10 +78,10 @@ bool FPReorderingAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
             const std::string& fileName = candidate.getFileName();
 
             // We make sure the file is contained in our base directory...
-            if (fileName.find(reordering.baseDirectory) == std::string::npos)
+            if (fileName.find(version.baseDirectory) == std::string::npos)
                 return true;
 
-            FunctionData& data = reordering.candidates[candidate];
+            FunctionData& data = version.candidates[candidate];
             if (data.valid && data.empty())
             {
                 llvm::outs() << "Found valid candidate: " << candidate.getName() << "\n";
@@ -98,7 +98,7 @@ bool FPReorderingRewriter::VisitCallExpr(clang::CallExpr* CE) {
     // We try to get the callee of this function call.
     if (FunctionDecl* FD = CE->getDirectCallee()) {
         // We check if this function is to be reordered
-        const Transformation* transformation = reordering.transformation;
+        const Transformation* transformation = version.transformation;
         const FunctionUnique target(FD, astContext);
         if (transformation->target == target) {
             llvm::outs() << "Call to function: " << FD->getNameAsString() << " has to be rewritten!\n";
@@ -123,7 +123,7 @@ bool FPReorderingRewriter::VisitCallExpr(clang::CallExpr* CE) {
 // AST rewriter, used for rewriting source code.
 bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
     // Check if this is a declaration for the function that is to be reordered
-    const Transformation* transformation = reordering.transformation;
+    const Transformation* transformation = version.transformation;
     FunctionUnique target(FD, astContext);
     if (transformation->target == target) {
         llvm::outs() << "Rewriting function: " << FD->getNameAsString() << " definition: " << FD->isThisDeclarationADefinition() << "\n";
@@ -146,6 +146,6 @@ bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
     return true;
 }
 
-void fpreordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings) {
-    reorder<FPReordering, FPReorderingAnalyser, FPReorderingRewriter>(Tool, baseDirectory, outputDirectory, numberOfReorderings);
+void fpreordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfVersions) {
+    generateVersions<FPVersion, FPAnalyser, FPReorderingRewriter>(Tool, baseDirectory, outputDirectory, numberOfVersions);
 }

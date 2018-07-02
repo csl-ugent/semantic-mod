@@ -55,13 +55,9 @@ int main(int argc, const char **argv) {
 
     // We determine what kind of transformation to apply.
     if (TransformationType == "StructReordering") {
-
-        // We start the structreordering transformation.
         structReordering(&Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
 
     } else if (TransformationType == "FPReordering") {
-
-        // We start the function parameter reordering transformation.
         fpreordering(&Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
     }
 

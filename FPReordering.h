@@ -54,11 +54,11 @@ class FunctionData : public TargetData {
         }
 };
 
-class FPReordering : public Reordering<FunctionUnique, FunctionData> {
+class FPVersion : public Version<FunctionUnique, FunctionData> {
 public:
-    explicit FPReordering(const std::string& bd, const std::string& od) : Reordering(bd, od) {}
+    explicit FPVersion(const std::string& bd, const std::string& od) : Version(bd, od) {}
 };
 
-void fpreordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings);
+void fpreordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfVersions);
 
 #endif

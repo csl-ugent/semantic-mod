@@ -9,7 +9,7 @@
 using namespace clang;
 using namespace llvm;
 
-bool StructReorderingAnalyser::VisitRecordDecl(clang::RecordDecl* D) {
+bool StructAnalyser::VisitRecordDecl(clang::RecordDecl* D) {
     // We make sure the record is a struct, and we have its definition
     if (D->isStruct() && D->isThisDeclarationADefinition()) {
         // Count the number of fields in the struct
@@ -21,7 +21,7 @@ bool StructReorderingAnalyser::VisitRecordDecl(clang::RecordDecl* D) {
             const std::string& fileName = candidate.getFileName();
 
             // We make sure the file is contained in our base directory...
-            if (fileName.find(reordering.baseDirectory) == std::string::npos)
+            if (fileName.find(version.baseDirectory) == std::string::npos)
                 return true;
 
             // To be a valid candidate none of the fields can be macro.
@@ -29,7 +29,7 @@ bool StructReorderingAnalyser::VisitRecordDecl(clang::RecordDecl* D) {
                 if (field->getLocStart().isMacroID())
                     return true;
 
-            StructData& data = reordering.candidates[candidate];
+            StructData& data = version.candidates[candidate];
             if (data.valid && data.empty())
             {
                 llvm::outs() << "Found valid candidate: " << candidate.getName() << "\n";
@@ -40,7 +40,7 @@ bool StructReorderingAnalyser::VisitRecordDecl(clang::RecordDecl* D) {
     return true;
 }
 
-void StructReorderingAnalyser::detectStructsRecursively(const Type* origType) {
+void StructAnalyser::detectStructsRecursively(const Type* origType) {
     // We obtain the canonical qual type/type.
     QualType qualTypeCn = origType->getCanonicalTypeInternal();
     if (const Type* type = qualTypeCn.getTypePtrOrNull()) {
@@ -50,11 +50,11 @@ void StructReorderingAnalyser::detectStructsRecursively(const Type* origType) {
             const std::string& fileName = candidate.getFileName();
 
             // We make sure the file is contained in our base directory...
-            if (fileName.find(reordering.baseDirectory) == std::string::npos)
+            if (fileName.find(version.baseDirectory) == std::string::npos)
                 return;
 
             // Invalidate the struct.
-            reordering.invalidateCandidate(candidate, "an instance of the struct is stored globally");
+            version.invalidateCandidate(candidate, "an instance of the struct is stored globally");
 
             // We further investigate the fields of the struct.
             for(auto field : D->fields())
@@ -82,11 +82,11 @@ void StructReorderingAnalyser::detectStructsRecursively(const Type* origType) {
     }
 }
 
-bool StructReorderingAnalyser::VisitVarDecl(clang::VarDecl *D) {
+bool StructAnalyser::VisitVarDecl(clang::VarDecl *D) {
     const Type* type = (D->getType()).getTypePtrOrNull();
 
     // We detect structs recursively and remove them from the struct map.
-    // We don't support reordering structs that have global storage
+    // We don't support transforming structs that have global storage
     // TODO: maybe only do this for read/write data?
     if (D->hasGlobalStorage())
         detectStructsRecursively(type);
@@ -128,7 +128,7 @@ bool StructReorderingRewriter::VisitRecordDecl(clang::RecordDecl* D) {
     // We make sure the record is a struct and a definition.
     if (D->isStruct() && D->isThisDeclarationADefinition()) {
         // Check if this is a declaration for the struct that is to be reordered
-        const Transformation* transformation = reordering.transformation;
+        const Transformation* transformation = version.transformation;
         const StructUnique target(D, astContext);
         if (transformation->target == target) {
             llvm::outs() << "Declaration of: " << target.getName() << " has to be rewritten!\n";
@@ -151,6 +151,6 @@ bool StructReorderingRewriter::VisitRecordDecl(clang::RecordDecl* D) {
 }
 
 // Method used for the structreordering semantic transformation.
-void structReordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfReorderings) {
-    reorder<StructReordering, StructReorderingAnalyser, StructReorderingRewriter>(Tool, baseDirectory, outputDirectory, numberOfReorderings);
+void structReordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfVersions) {
+    generateVersions<StructVersion, StructAnalyser, StructReorderingRewriter>(Tool, baseDirectory, outputDirectory, numberOfVersions);
 }
