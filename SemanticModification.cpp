@@ -1,7 +1,6 @@
 #include "FPReordering.h"
 #include "SemanticUtil.h"
 #include "StructReordering.h"
-#include "SWCReordering.h"
 
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -64,10 +63,6 @@ int main(int argc, const char **argv) {
 
         // We start the function parameter reordering transformation.
         fpreordering(&Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
-    } else if (TransformationType == "SWCReordering") {
-
-        // We start the switch case reordering transformation.
-        swcreordering(&Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
     }
 
     // Succes.
