@@ -81,7 +81,7 @@ bool FPAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
             if (fileName.find(version.baseDirectory) == std::string::npos)
                 return true;
 
-            FunctionData& data = version.candidates[candidate];
+            FunctionUnique::Data& data = version.candidates[candidate];
             if (data.valid && data.empty())
             {
                 llvm::outs() << "Found valid candidate: " << candidate.getName() << "\n";

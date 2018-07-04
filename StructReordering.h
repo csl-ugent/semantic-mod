@@ -21,48 +21,48 @@ class StructUnique : public TargetUnique {
                 }
             }
         }
-};
 
-class StructData : public TargetData {
-    struct StructField {
-        std::string name;
-        std::string type;
+        class Data : public TargetUnique::Data {
+            struct StructField {
+                std::string name;
+                std::string type;
 
-        StructField(std::string name, std::string type) : name(name), type(type) {}
-    };
+                StructField(std::string name, std::string type) : name(name), type(type) {}
+            };
 
-    public:
-        std::vector<StructField> fields;
+            public:
+            std::vector<StructField> fields;
 
-        StructData(bool valid = true) : TargetData(valid) {}
-        void addFields(clang::RecordDecl* D)
-        {
-            for(auto field : D->fields())
+            Data(bool valid = true) : TargetUnique::Data(valid) {}
+            void addFields(clang::RecordDecl* D)
             {
-                fields.emplace_back(field->getNameAsString(), field->getType().getAsString());
+                for(auto field : D->fields())
+                {
+                    fields.emplace_back(field->getNameAsString(), field->getType().getAsString());
+                }
             }
-        }
-        bool empty() const {
-          return fields.empty();
-        }
-        Json::Value getJSON(const std::vector<unsigned>& ordering) const {
-            Json::Value items(Json::arrayValue);
-            for (unsigned iii = 0; iii < fields.size(); iii++) {
-                const StructField& param = fields[ordering[iii]];
-                Json::Value v;
-                v["position"] = iii;
-                v["name"] = param.name;
-                v["type"] = param.type;
-                items.append(v);
+            bool empty() const {
+                return fields.empty();
             }
-            return items;
-        }
-        unsigned nrOfItems() const {
-            return fields.size();
-        }
+            Json::Value getJSON(const std::vector<unsigned>& ordering) const {
+                Json::Value items(Json::arrayValue);
+                for (unsigned iii = 0; iii < fields.size(); iii++) {
+                    const StructField& param = fields[ordering[iii]];
+                    Json::Value v;
+                    v["position"] = iii;
+                    v["name"] = param.name;
+                    v["type"] = param.type;
+                    items.append(v);
+                }
+                return items;
+            }
+            unsigned nrOfItems() const {
+                return fields.size();
+            }
+        };
 };
 
-class StructVersion : public Version<StructUnique, StructData> {
+class StructVersion : public Version<StructUnique> {
 public:
     explicit StructVersion(const std::string& bd, const std::string& od) : Version(bd, od) {}
 };

@@ -29,7 +29,7 @@ bool StructAnalyser::VisitRecordDecl(clang::RecordDecl* D) {
                 if (field->getLocStart().isMacroID())
                     return true;
 
-            StructData& data = version.candidates[candidate];
+            StructUnique::Data& data = version.candidates[candidate];
             if (data.valid && data.empty())
             {
                 llvm::outs() << "Found valid candidate: " << candidate.getName() << "\n";

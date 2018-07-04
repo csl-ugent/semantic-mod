@@ -53,19 +53,19 @@ class TargetUnique {
 
             return left < right;
         }
-};
 
-// This class describes the data associated to a target
-class TargetData {
-    protected:
-        virtual ~TargetData() {}
-    public:
-        bool valid;
+        // This class describes the data associated to a target
+        class Data {
+            protected:
+                virtual ~Data() {}
+            public:
+                bool valid;
 
-        TargetData(bool valid = true) : valid(valid) {}
-        virtual bool empty() const = 0;
-        virtual Json::Value getJSON(const std::vector<unsigned>& ordering) const = 0;
-        virtual unsigned nrOfItems() const = 0;
+                Data(bool valid = true) : valid(valid) {}
+                virtual bool empty() const = 0;
+                virtual Json::Value getJSON(const std::vector<unsigned>& ordering) const = 0;
+                virtual unsigned nrOfItems() const = 0;
+        };
 };
 
 // This struct describes a transformation
@@ -77,7 +77,7 @@ struct Transformation {
 };
 
 // This class contains the data used during the generating of new versions
-template <typename TargetUnique, typename TargetData>
+template <typename TargetType>
 class Version {
     protected:
         virtual ~Version() {}
@@ -85,12 +85,12 @@ class Version {
         std::string baseDirectory;
         std::string outputPrefix;
         Transformation* transformation;// The transformation to apply
-        llvm::MapVector<TargetUnique, TargetData, std::map<TargetUnique, unsigned>> candidates;// Map containing all information regarding candidates.
+        llvm::MapVector<TargetType, typename TargetType::Data, std::map<TargetType, unsigned>> candidates;// Map containing all information regarding candidates.
         Version(const std::string& bd, const std::string& od) : baseDirectory(bd), outputPrefix(od + "version_") {}
 
-        void invalidateCandidate(const TargetUnique& candidate, const std::string& reason) {
+        void invalidateCandidate(const TargetType& candidate, const std::string& reason) {
             // If the candidate is already invalid, just return
-            TargetData& data = candidates[candidate];
+            TargetUnique::Data& data = candidates[candidate];
             if (!data.valid)
                 return;
 
@@ -105,7 +105,7 @@ void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDi
     // We run the analysis phase and get the valid candidates
     VersionType version(baseDirectory, outputDirectory);
     Tool->run(new AnalysisFrontendActionFactory<VersionType, AnalyserType>(version));
-    std::vector<std::pair<const TargetUnique&, const TargetData&>> candidates;
+    std::vector<std::pair<const TargetUnique&, const TargetUnique::Data&>> candidates;
     for (const auto& it : version.candidates) {
         if (it.second.valid)
         {
