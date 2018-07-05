@@ -15,6 +15,8 @@ public:
     void detectStructsRecursively(const clang::Type* origType);
     bool VisitRecordDecl(clang::RecordDecl* D);
     bool VisitVarDecl(clang::VarDecl* D);
+
+    typedef StructUnique Target;
 };
 
 // Semantic Rewriter, will rewrite source code based on the AST.
@@ -32,4 +34,6 @@ public:
 
     // We want to investigate top-level things.
     bool VisitRecordDecl(clang::RecordDecl* D);
+
+    typedef StructAnalyser Analyser;
 };

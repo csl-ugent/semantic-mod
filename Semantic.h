@@ -98,8 +98,10 @@ class Version {
 };
 
 // Method used to generate new versions
-template <typename TargetType, typename AnalyserType, typename RewriterType>
+template <typename RewriterType>
 void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfVersions) {
+    typedef typename RewriterType::Analyser AnalyserType;
+    typedef typename AnalyserType::Target TargetType;
     typedef Version<TargetType> VersionType;
 
     // We run the analysis phase and get the valid candidates

@@ -147,5 +147,5 @@ bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
 }
 
 void fpreordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfVersions) {
-    generateVersions<FunctionUnique, FPAnalyser, FPReorderingRewriter>(Tool, baseDirectory, outputDirectory, numberOfVersions);
+    generateVersions<FPReorderingRewriter>(Tool, baseDirectory, outputDirectory, numberOfVersions);
 }

@@ -15,6 +15,8 @@ public:
     bool VisitBinaryOperator(clang::BinaryOperator* DRE);
     bool VisitCallExpr(clang::CallExpr* CE);
     bool VisitFunctionDecl(clang::FunctionDecl* D);
+
+    typedef FunctionUnique Target;
 };
 
 // Semantic Rewriter, will rewrite source code based on the AST.
@@ -35,4 +37,6 @@ public:
 
     // We want to investigate FunctionDecl's.
     bool VisitFunctionDecl(clang::FunctionDecl* D);
+
+    typedef FPAnalyser Analyser;
 };
