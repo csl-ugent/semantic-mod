@@ -1,6 +1,6 @@
-#include "FPReordering.h"
+#include "FunctionRewriting.h"
 #include "SemanticUtil.h"
-#include "StructReordering.h"
+#include "StructRewriting.h"
 
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -55,10 +55,9 @@ int main(int argc, const char **argv) {
 
     // We determine what kind of transformation to apply.
     if (TransformationType == "StructReordering") {
-        structReordering(&Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
-
+        generateVersions<StructReorderingRewriter>(&Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
     } else if (TransformationType == "FPReordering") {
-        fpreordering(&Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
+        generateVersions<FPReorderingRewriter>(&Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
     }
 
     // Succes.

@@ -1,5 +1,4 @@
-#include "FPReordering.h"
-#include "FPVisitor.h"
+#include "FunctionRewriting.h"
 #include "SemanticUtil.h"
 
 #include <string>
@@ -144,8 +143,4 @@ bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
     }
 
     return true;
-}
-
-void fpreordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfVersions) {
-    generateVersions<FPReorderingRewriter>(Tool, baseDirectory, outputDirectory, numberOfVersions);
 }

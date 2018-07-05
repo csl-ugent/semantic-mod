@@ -1,5 +1,4 @@
-#include "StructReordering.h"
-#include "StructVisitor.h"
+#include "StructRewriting.h"
 #include "SemanticUtil.h"
 
 #include <iterator>
@@ -148,9 +147,4 @@ bool StructReorderingRewriter::VisitRecordDecl(clang::RecordDecl* D) {
         }
     }
     return true;
-}
-
-// Method used for the structreordering semantic transformation.
-void structReordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfVersions) {
-    generateVersions<StructReorderingRewriter>(Tool, baseDirectory, outputDirectory, numberOfVersions);
 }
