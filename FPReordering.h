@@ -54,10 +54,7 @@ class FunctionUnique : public TargetUnique {
         };
 };
 
-class FPVersion : public Version<FunctionUnique> {
-public:
-    explicit FPVersion(const std::string& bd, const std::string& od) : Version(bd, od) {}
-};
+typedef Version<FunctionUnique> FPVersion;
 
 void fpreordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfVersions);
 

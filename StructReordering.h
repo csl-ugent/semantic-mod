@@ -62,10 +62,7 @@ class StructUnique : public TargetUnique {
         };
 };
 
-class StructVersion : public Version<StructUnique> {
-public:
-    explicit StructVersion(const std::string& bd, const std::string& od) : Version(bd, od) {}
-};
+typedef Version<StructUnique> StructVersion;
 
 void structReordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfVersions);
 

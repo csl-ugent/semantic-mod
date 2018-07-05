@@ -152,5 +152,5 @@ bool StructReorderingRewriter::VisitRecordDecl(clang::RecordDecl* D) {
 
 // Method used for the structreordering semantic transformation.
 void structReordering(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfVersions) {
-    generateVersions<StructVersion, StructAnalyser, StructReorderingRewriter>(Tool, baseDirectory, outputDirectory, numberOfVersions);
+    generateVersions<StructUnique, StructAnalyser, StructReorderingRewriter>(Tool, baseDirectory, outputDirectory, numberOfVersions);
 }

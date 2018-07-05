@@ -79,8 +79,6 @@ struct Transformation {
 // This class contains the data used during the generating of new versions
 template <typename TargetType>
 class Version {
-    protected:
-        virtual ~Version() {}
     public:
         std::string baseDirectory;
         std::string outputPrefix;
@@ -100,8 +98,10 @@ class Version {
 };
 
 // Method used to generate new versions
-template <typename VersionType, typename AnalyserType, typename RewriterType>
+template <typename TargetType, typename AnalyserType, typename RewriterType>
 void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfVersions) {
+    typedef Version<TargetType> VersionType;
+
     // We run the analysis phase and get the valid candidates
     VersionType version(baseDirectory, outputDirectory);
     Tool->run(new AnalysisFrontendActionFactory<VersionType, AnalyserType>(version));
