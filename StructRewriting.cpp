@@ -127,12 +127,11 @@ bool StructReorderingRewriter::VisitRecordDecl(clang::RecordDecl* D) {
     // We make sure the record is a struct and a definition.
     if (D->isStruct() && D->isThisDeclarationADefinition()) {
         // Check if this is a declaration for the struct that is to be reordered
-        const Transformation* transformation = version.transformation;
         const StructUnique target(D, astContext);
-        if (transformation->target == target) {
+        if (transformation.target == target) {
             llvm::outs() << "Declaration of: " << target.getName() << " has to be rewritten!\n";
 
-            auto ordering = transformation->ordering;
+            auto ordering = transformation.ordering;
             std::vector<clang::FieldDecl*> fields(D->field_begin(), D->field_end());
             for (size_t iii = 0; iii < fields.size(); iii++) {
                 const SourceRange& oldRange = fields[iii]->getSourceRange();

@@ -65,25 +65,26 @@ class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFact
     class RewritingFrontendAction : public clang::ASTFrontendAction {
         class RewritingASTConsumer : public clang::ASTConsumer {
             private:
-                VersionType& version;
+                const Transformation& transformation;
                 clang::Rewriter& rewriter;
             public:
-                explicit RewritingASTConsumer(VersionType& version, clang::Rewriter& rewriter)
-                    : version(version), rewriter(rewriter) {}
+                explicit RewritingASTConsumer(const Transformation& transformation, clang::Rewriter& rewriter)
+                    : transformation(transformation), rewriter(rewriter) {}
 
                 void HandleTranslationUnit(clang::ASTContext &Context) {
-                    RewriterType visitor = RewriterType(Context, version, rewriter);
+                    RewriterType visitor = RewriterType(Context, transformation, rewriter);
                     visitor.TraverseDecl(Context.getTranslationUnitDecl());
                 }
         };
 
         private:
         VersionType& version;
+        const Transformation& transformation;
         clang::Rewriter rewriter;
         int id;
         public:
-        explicit RewritingFrontendAction(VersionType& version, int id)
-            : version(version), id(id) {}
+        explicit RewritingFrontendAction(VersionType& version, const Transformation& transformation, int id)
+            : version(version), transformation(transformation), id(id) {}
 
         void EndSourceFileAction() {
             // We obtain the filename.
@@ -154,22 +155,23 @@ class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFact
         }
 
         std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(clang::CompilerInstance &CI, llvm::StringRef file) {
-            return llvm::make_unique<RewritingASTConsumer>(version, rewriter);
+            return llvm::make_unique<RewritingASTConsumer>(transformation, rewriter);
         }
     };
 
 private:
     VersionType& version;
+    const Transformation& transformation;
     int id;
 
 public:
-    RewritingFrontendActionFactory(VersionType& version, int id)
-        : version(version), id(id) {}
+    RewritingFrontendActionFactory(VersionType& version, const Transformation& transformation, int id)
+        : version(version), transformation(transformation), id(id) {}
 
     // We create a new instance of the frontend action.
     clang::FrontendAction* create() {
-        llvm::outs() << "Phase 2: performing rewrite for version: " << id << " target name: " << version.transformation->target.getName() << "\n";
-        return new RewritingFrontendAction(version, id);
+        llvm::outs() << "Phase 2: performing rewrite for version: " << id << " target name: " << transformation.target.getName() << "\n";
+        return new RewritingFrontendAction(version, transformation, id);
     }
 };
 

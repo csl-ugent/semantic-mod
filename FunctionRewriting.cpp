@@ -97,12 +97,11 @@ bool FPReorderingRewriter::VisitCallExpr(clang::CallExpr* CE) {
     // We try to get the callee of this function call.
     if (FunctionDecl* FD = CE->getDirectCallee()) {
         // We check if this function is to be reordered
-        const Transformation* transformation = version.transformation;
         const FunctionUnique target(FD, astContext);
-        if (transformation->target == target) {
+        if (transformation.target == target) {
             llvm::outs() << "Call to function: " << FD->getNameAsString() << " has to be rewritten!\n";
 
-            auto ordering = transformation->ordering;
+            auto ordering = transformation.ordering;
             for (unsigned iii = 0; iii < CE->getNumArgs(); iii++)
             {
                 const SourceRange& oldRange = CE->getArg(iii)->getSourceRange();
@@ -122,13 +121,12 @@ bool FPReorderingRewriter::VisitCallExpr(clang::CallExpr* CE) {
 // AST rewriter, used for rewriting source code.
 bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
     // Check if this is a declaration for the function that is to be reordered
-    const Transformation* transformation = version.transformation;
     FunctionUnique target(FD, astContext);
-    if (transformation->target == target) {
+    if (transformation.target == target) {
         llvm::outs() << "Rewriting function: " << FD->getNameAsString() << " definition: " << FD->isThisDeclarationADefinition() << "\n";
 
         // We iterate over all parameters in the function declaration.
-        const auto ordering = transformation->ordering;
+        const auto ordering = transformation.ordering;
         for (unsigned iii = 0; iii < FD->getNumParams(); iii++) {
             const ParmVarDecl* oldParam = FD->getParamDecl(iii);
             const ParmVarDecl* newParam = FD->getParamDecl(ordering[iii]);

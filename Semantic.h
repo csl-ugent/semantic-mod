@@ -129,10 +129,7 @@ void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDi
     // We perform the rewrite operations.
     for (unsigned long iii = 0; iii < actualNumberOfVersions; iii++)
     {
-        // We select the current transformation
-        version.transformation = &transformations[iii];
-
-        Tool->run(new RewritingFrontendActionFactory<VersionType, RewriterType>(version, iii + 1));
+        Tool->run(new RewritingFrontendActionFactory<VersionType, RewriterType>(version, transformations[iii], iii + 1));
     }
 }
 

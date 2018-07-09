@@ -78,11 +78,11 @@ public:
 class FPReorderingRewriter : public clang::RecursiveASTVisitor<FPReorderingRewriter> {
 private:
     clang::ASTContext& astContext; // Used for getting additional AST info.
-    FPVersion& version;
+    const Transformation& transformation;
     clang::Rewriter& rewriter;
 public:
-    explicit FPReorderingRewriter(clang::ASTContext& Context, FPVersion& version, clang::Rewriter& rewriter)
-      : astContext(Context), version(version), rewriter(rewriter)
+    explicit FPReorderingRewriter(clang::ASTContext& Context, const Transformation& transformation, clang::Rewriter& rewriter)
+      : astContext(Context), transformation(transformation), rewriter(rewriter)
     {
         rewriter.setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
     }

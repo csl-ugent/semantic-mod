@@ -86,11 +86,11 @@ public:
 class StructReorderingRewriter : public clang::RecursiveASTVisitor<StructReorderingRewriter> {
 private:
     clang::ASTContext& astContext; // Used for getting additional AST info.
-    StructVersion& version;
+    const Transformation& transformation;
     clang::Rewriter& rewriter;
 public:
-    explicit StructReorderingRewriter(clang::ASTContext& Context, StructVersion& version, clang::Rewriter& rewriter)
-      : astContext(Context), version(version), rewriter(rewriter)
+    explicit StructReorderingRewriter(clang::ASTContext& Context, const Transformation& transformation, clang::Rewriter& rewriter)
+      : astContext(Context), transformation(transformation), rewriter(rewriter)
     {
         rewriter.setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
     }

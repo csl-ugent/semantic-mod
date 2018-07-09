@@ -75,7 +75,6 @@ class Version {
     public:
         std::string baseDirectory;
         std::string outputPrefix;
-        Transformation* transformation;// The transformation to apply
         llvm::MapVector<TargetType, typename TargetType::Data, std::map<TargetType, unsigned>> candidates;// Map containing all information regarding candidates.
         Version(const std::string& bd, const std::string& od) : baseDirectory(bd), outputPrefix(od + "version_") {}
 
