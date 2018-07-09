@@ -1,7 +1,7 @@
 #ifndef _FPREORDERING
 #define _FPREORDERING
 
-#include "Semantic.h"
+#include "SemanticData.h"
 #include "SemanticFrontendAction.h"
 
 #include "clang/AST/ASTContext.h"

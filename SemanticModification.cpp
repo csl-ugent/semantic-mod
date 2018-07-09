@@ -1,5 +1,6 @@
 #include "FunctionRewriting.h"
 #include "SemanticUtil.h"
+#include "Semantic.h"
 #include "StructRewriting.h"
 
 #include "clang/Tooling/CommonOptionsParser.h"

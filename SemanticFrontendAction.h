@@ -1,6 +1,8 @@
 #ifndef _SEMANTIC_FRONTENDACTION
 #define _SEMANTIC_FRONTENDACTION
 
+#include "SemanticData.h"
+
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"

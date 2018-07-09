@@ -1,7 +1,7 @@
 #ifndef _STRUCTREORDERING
 #define _STRUCTREORDERING
 
-#include "Semantic.h"
+#include "SemanticData.h"
 #include "SemanticFrontendAction.h"
 
 #include "clang/AST/ASTContext.h"
