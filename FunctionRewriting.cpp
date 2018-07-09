@@ -22,10 +22,10 @@ bool FPAnalyser::VisitBinaryOperator(clang::BinaryOperator* BE) {
                 const std::string& fileName = candidate.getFileName();
 
                 // We make sure the file is contained in our base directory...
-                if (fileName.find(version.baseDirectory) == std::string::npos)
+                if (fileName.find(metadata.baseDirectory) == std::string::npos)
                     return true;
 
-                version.invalidateCandidate(candidate, "function is assigned as a pointer");
+                candidates.invalidate(candidate, "function is assigned as a pointer");
             }
         }
     }
@@ -39,11 +39,11 @@ bool FPAnalyser::VisitCallExpr(clang::CallExpr* CE) {
         const std::string& fileName = candidate.getFileName();
 
         // We make sure the file is contained in our base directory...
-        if (fileName.find(version.baseDirectory) == std::string::npos)
+        if (fileName.find(metadata.baseDirectory) == std::string::npos)
             return true;
 
         if (CE->getLocStart().isMacroID()) // Invalidate the function if it's in a macro.
-            version.invalidateCandidate(candidate, "function is used in a macro");
+            candidates.invalidate(candidate, "function is used in a macro");
         else
         {
             // Check if any of the argument expression has side effects. In this case we invalidate the function.
@@ -54,7 +54,7 @@ bool FPAnalyser::VisitCallExpr(clang::CallExpr* CE) {
                 auto arg = CE->getArg(iii);
                 if (arg->HasSideEffects(astContext, true))
                 {
-                    version.invalidateCandidate(candidate, "in one of the function invocations, one of the arguments has side effects");
+                    candidates.invalidate(candidate, "in one of the function invocations, one of the arguments has side effects");
                     break;
                 }
             }
@@ -77,10 +77,10 @@ bool FPAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
             const std::string& fileName = candidate.getFileName();
 
             // We make sure the file is contained in our base directory...
-            if (fileName.find(version.baseDirectory) == std::string::npos)
+            if (fileName.find(metadata.baseDirectory) == std::string::npos)
                 return true;
 
-            FunctionUnique::Data& data = version.candidates[candidate];
+            FunctionUnique::Data& data = candidates.get(candidate);
             if (data.valid && data.empty())
             {
                 llvm::outs() << "Found valid candidate: " << candidate.getName() << "\n";

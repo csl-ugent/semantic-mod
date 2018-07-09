@@ -17,49 +17,54 @@
 #include <sstream>
 #include <string>
 
-template <typename VersionType, typename AnalyserType>
+template <typename AnalyserType>
 class AnalysisFrontendActionFactory : public clang::tooling::FrontendActionFactory
 {
+    typedef typename AnalyserType::Target TargetType;
+
     class AnalysisFrontendAction : public clang::ASTFrontendAction {
         class AnalysisASTConsumer : public clang::ASTConsumer {
             private:
-                VersionType& version;
+                const MetaData& metadata;
+                Candidates<TargetType>& candidates;
             public:
-                explicit AnalysisASTConsumer(VersionType& version)
-                    : version(version) { }
+                explicit AnalysisASTConsumer(const MetaData& metadata, Candidates<TargetType>& candidates)
+                    : metadata(metadata), candidates(candidates) { }
 
                 void HandleTranslationUnit(clang::ASTContext &Context) {
-                    AnalyserType visitor = AnalyserType(Context, version);
+                    AnalyserType visitor = AnalyserType(Context, metadata, candidates);
                     visitor.TraverseDecl(Context.getTranslationUnitDecl());
                 }
         };
 
         protected:
-        VersionType& version;
+        const MetaData& metadata;
+        Candidates<TargetType>& candidates;
         public:
-        explicit AnalysisFrontendAction(VersionType& version)
-            : version(version) {}
+        explicit AnalysisFrontendAction(const MetaData& metadata, Candidates<TargetType>& candidates)
+            : metadata(metadata), candidates(candidates) {}
 
         std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(clang::CompilerInstance &CI, llvm::StringRef file) {
-            return llvm::make_unique<AnalysisASTConsumer>(version);
+            return llvm::make_unique<AnalysisASTConsumer>(metadata, candidates);
         }
     };
 
 protected:
-    VersionType& version;
+    const MetaData& metadata;
+    Candidates<TargetType>& candidates;
 
 public:
-    AnalysisFrontendActionFactory(VersionType& version)
-        : version(version) {}
+    AnalysisFrontendActionFactory(const MetaData& metadata, Candidates<TargetType>& candidates)
+        : metadata(metadata), candidates(candidates) {}
 
     // We create a new instance of the frontend action.
     clang::FrontendAction* create() {
         llvm::outs() << "Phase 1: analysis\n";
-        return new AnalysisFrontendAction(version);
+        return new AnalysisFrontendAction(metadata, candidates);
     }
 };
 
-template <typename VersionType, typename RewriterType>
+template <typename RewriterType>
 class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFactory
 {
     class RewritingFrontendAction : public clang::ASTFrontendAction {
@@ -78,13 +83,13 @@ class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFact
         };
 
         private:
-        VersionType& version;
+        const MetaData& metadata;
         const Transformation& transformation;
         clang::Rewriter rewriter;
         int id;
         public:
-        explicit RewritingFrontendAction(VersionType& version, const Transformation& transformation, int id)
-            : version(version), transformation(transformation), id(id) {}
+        explicit RewritingFrontendAction(const MetaData& metadata, const Transformation& transformation, int id)
+            : metadata(metadata), transformation(transformation), id(id) {}
 
         void EndSourceFileAction() {
             // We obtain the filename.
@@ -102,7 +107,7 @@ class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFact
         void writeChangesToOutput() {
             // We construct the full output directory.
             std::stringstream s;
-            s << version.outputPrefix << "v" << this->id;
+            s << metadata.outputPrefix << "v" << this->id;
             std::string fullPath = s.str();
 
             // Debug
@@ -124,7 +129,7 @@ class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFact
                 llvm::StringRef fileNameRef = rewriter.getSourceMgr().getFileEntryForID(I->first)->getName();
                 std::string fileNameStr = std::string(fileNameRef.data());
                 llvm::outs() << "Obtained filename: " << fileNameStr << "\n";
-                std::string fileName = fileNameStr.substr(fileNameStr.find(version.baseDirectory) + version.baseDirectory.length()); /* until the end automatically... */
+                std::string fileName = fileNameStr.substr(fileNameStr.find(metadata.baseDirectory) + metadata.baseDirectory.length()); /* until the end automatically... */
 
                 // Optionally create required subdirectories.
                 {
@@ -160,18 +165,18 @@ class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFact
     };
 
 private:
-    VersionType& version;
+    const MetaData& metadata;
     const Transformation& transformation;
     int id;
 
 public:
-    RewritingFrontendActionFactory(VersionType& version, const Transformation& transformation, int id)
-        : version(version), transformation(transformation), id(id) {}
+    RewritingFrontendActionFactory(const MetaData& metadata, const Transformation& transformation, int id)
+        : metadata(metadata), transformation(transformation), id(id) {}
 
     // We create a new instance of the frontend action.
     clang::FrontendAction* create() {
         llvm::outs() << "Phase 2: performing rewrite for version: " << id << " target name: " << transformation.target.getName() << "\n";
-        return new RewritingFrontendAction(version, transformation, id);
+        return new RewritingFrontendAction(metadata, transformation, id);
     }
 };
 

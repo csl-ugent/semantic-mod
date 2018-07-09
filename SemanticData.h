@@ -71,14 +71,16 @@ struct Transformation {
 
 // This class contains the data used during the generating of new versions
 template <typename TargetType>
-class Version {
-    public:
-        std::string baseDirectory;
-        std::string outputPrefix;
+class Candidates {
+    private:
         llvm::MapVector<TargetType, typename TargetType::Data, std::map<TargetType, unsigned>> candidates;// Map containing all information regarding candidates.
-        Version(const std::string& bd, const std::string& od) : baseDirectory(bd), outputPrefix(od + "version_") {}
 
-        void invalidateCandidate(const TargetType& candidate, const std::string& reason) {
+    public:
+        typename TargetType::Data& get(const TargetType& candidate) {
+            return candidates[candidate];
+        }
+
+        void invalidate(const TargetType& candidate, const std::string& reason) {
             // If the candidate is already invalid, just return
             TargetUnique::Data& data = candidates[candidate];
             if (!data.valid)
@@ -87,6 +89,26 @@ class Version {
             llvm::outs() << "Invalidate candidate: " << candidate.getName() << ". Reason: " << reason << ".\n";
             data.valid = false;
         }
+
+        std::vector<std::pair<const TargetUnique&, const TargetUnique::Data&>> select_valid() const {
+            std::vector<std::pair<const TargetUnique&, const TargetUnique::Data&>> ret;
+            for (const auto& it : candidates) {
+                if (it.second.valid)
+                {
+                    llvm::outs() << "Valid candidate: " << it.first.getName() << "\n";
+                    ret.emplace_back(it);
+                }
+            }
+            return ret;
+        }
+};
+
+// This class contains some metadata used by FrontendActions
+class MetaData {
+    public:
+        const std::string baseDirectory;
+        const std::string outputPrefix;
+        MetaData(const std::string& bd, const std::string& od) : baseDirectory(bd), outputPrefix(od + "version_") {}
 };
 
 #endif

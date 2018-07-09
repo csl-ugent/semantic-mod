@@ -20,7 +20,7 @@ bool StructAnalyser::VisitRecordDecl(clang::RecordDecl* D) {
             const std::string& fileName = candidate.getFileName();
 
             // We make sure the file is contained in our base directory...
-            if (fileName.find(version.baseDirectory) == std::string::npos)
+            if (fileName.find(metadata.baseDirectory) == std::string::npos)
                 return true;
 
             // To be a valid candidate none of the fields can be macro.
@@ -28,7 +28,7 @@ bool StructAnalyser::VisitRecordDecl(clang::RecordDecl* D) {
                 if (field->getLocStart().isMacroID())
                     return true;
 
-            StructUnique::Data& data = version.candidates[candidate];
+            StructUnique::Data& data = candidates.get(candidate);
             if (data.valid && data.empty())
             {
                 llvm::outs() << "Found valid candidate: " << candidate.getName() << "\n";
@@ -49,11 +49,11 @@ void StructAnalyser::detectStructsRecursively(const Type* origType) {
             const std::string& fileName = candidate.getFileName();
 
             // We make sure the file is contained in our base directory...
-            if (fileName.find(version.baseDirectory) == std::string::npos)
+            if (fileName.find(metadata.baseDirectory) == std::string::npos)
                 return;
 
             // Invalidate the struct.
-            version.invalidateCandidate(candidate, "an instance of the struct is stored globally");
+            candidates.invalidate(candidate, "an instance of the struct is stored globally");
 
             // We further investigate the fields of the struct.
             for(auto field : D->fields())

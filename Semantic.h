@@ -22,19 +22,13 @@ template <typename RewriterType>
 void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfVersions) {
     typedef typename RewriterType::Analyser AnalyserType;
     typedef typename AnalyserType::Target TargetType;
-    typedef Version<TargetType> VersionType;
+
+    const MetaData metadata(baseDirectory, outputDirectory);
 
     // We run the analysis phase and get the valid candidates
-    VersionType version(baseDirectory, outputDirectory);
-    Tool->run(new AnalysisFrontendActionFactory<VersionType, AnalyserType>(version));
-    std::vector<std::pair<const TargetUnique&, const TargetUnique::Data&>> candidates;
-    for (const auto& it : version.candidates) {
-        if (it.second.valid)
-        {
-            llvm::outs() << "Valid candidate: " << it.first.getName() << "\n";
-            candidates.emplace_back(it);
-        }
-    }
+    Candidates<TargetType> analysis_candidates;
+    Tool->run(new AnalysisFrontendActionFactory<AnalyserType>(metadata, analysis_candidates));
+    auto candidates = analysis_candidates.select_valid();
 
     // We need to determine the maximum number of versions that is actually
     // possible with the given input source files (based on the analysis phase).
@@ -120,7 +114,7 @@ void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDi
         output["modified"]["items"] = chosen.second.getJSON(ordering);// We output the modified order.
 
         // We write some information regarding the performed transformations to output.
-        writeJSONToFile(version.outputPrefix, versionId + 1, "transformations.json", output);
+        writeJSONToFile(metadata.outputPrefix, versionId + 1, "transformations.json", output);
 
         // Add the transformation
         transformations.emplace_back(chosen.first, ordering);
@@ -129,7 +123,7 @@ void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDi
     // We perform the rewrite operations.
     for (unsigned long iii = 0; iii < actualNumberOfVersions; iii++)
     {
-        Tool->run(new RewritingFrontendActionFactory<VersionType, RewriterType>(version, transformations[iii], iii + 1));
+        Tool->run(new RewritingFrontendActionFactory<RewriterType>(metadata, transformations[iii], iii + 1));
     }
 }
 

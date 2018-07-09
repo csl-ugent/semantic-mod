@@ -55,16 +55,15 @@ class FunctionUnique : public TargetUnique {
         };
 };
 
-typedef Version<FunctionUnique> FPVersion;
-
 // Semantic analyser, willl analyse different nodes within the AST.
 class FPAnalyser : public clang::RecursiveASTVisitor<FPAnalyser> {
 private:
     clang::ASTContext& astContext; // Used for getting additional AST info.
-    FPVersion& version;
+    const MetaData& metadata;
+    Candidates<FunctionUnique>& candidates;
 public:
-    explicit FPAnalyser(clang::ASTContext& Context, FPVersion& version)
-      : astContext(Context), version(version) { }
+    explicit FPAnalyser(clang::ASTContext& Context, const MetaData& metadata, Candidates<FunctionUnique>& candidates)
+      : astContext(Context), metadata(metadata), candidates(candidates) { }
 
     // We want to investigate Function declarations and invocations
     bool VisitBinaryOperator(clang::BinaryOperator* DRE);

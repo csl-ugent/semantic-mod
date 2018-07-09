@@ -63,16 +63,15 @@ class StructUnique : public TargetUnique {
         };
 };
 
-typedef Version<StructUnique> StructVersion;
-
 // Semantic analyser, willl analyse different nodes within the AST.
 class StructAnalyser : public clang::RecursiveASTVisitor<StructAnalyser> {
 private:
     clang::ASTContext& astContext; // Used for getting additional AST info.
-    StructVersion& version;
+    const MetaData& metadata;
+    Candidates<StructUnique>& candidates;
 public:
-    explicit StructAnalyser(clang::ASTContext& Context, StructVersion& version)
-      : astContext(Context), version(version) { }
+    explicit StructAnalyser(clang::ASTContext& Context, const MetaData& metadata, Candidates<StructUnique>& candidates)
+      : astContext(Context), metadata(metadata), candidates(candidates) { }
 
     // We want to investigate all possible struct declarations and uses
     void detectStructsRecursively(const clang::Type* origType);
