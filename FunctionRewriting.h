@@ -53,24 +53,22 @@ class FunctionUnique : public TargetUnique {
                 return params.size();
             }
         };
-};
 
-// Semantic analyser, willl analyse different nodes within the AST.
-class FPAnalyser : public clang::RecursiveASTVisitor<FPAnalyser> {
-private:
-    clang::ASTContext& astContext; // Used for getting additional AST info.
-    const MetaData& metadata;
-    Candidates<FunctionUnique>& candidates;
-public:
-    explicit FPAnalyser(clang::ASTContext& Context, const MetaData& metadata, Candidates<FunctionUnique>& candidates)
-      : astContext(Context), metadata(metadata), candidates(candidates) { }
+        // Semantic analyser, willl analyse different nodes within the AST.
+        class Analyser : public clang::RecursiveASTVisitor<Analyser> {
+            private:
+                clang::ASTContext& astContext; // Used for getting additional AST info.
+                const MetaData& metadata;
+                Candidates<FunctionUnique>& candidates;
+            public:
+                explicit Analyser(clang::ASTContext& Context, const MetaData& metadata, Candidates<FunctionUnique>& candidates)
+                    : astContext(Context), metadata(metadata), candidates(candidates) { }
 
-    // We want to investigate Function declarations and invocations
-    bool VisitBinaryOperator(clang::BinaryOperator* DRE);
-    bool VisitCallExpr(clang::CallExpr* CE);
-    bool VisitFunctionDecl(clang::FunctionDecl* D);
-
-    typedef FunctionUnique Target;
+                // We want to investigate Function declarations and invocations
+                bool VisitBinaryOperator(clang::BinaryOperator* DRE);
+                bool VisitCallExpr(clang::CallExpr* CE);
+                bool VisitFunctionDecl(clang::FunctionDecl* D);
+        };
 };
 
 // Semantic Rewriter, will rewrite source code based on the AST.
@@ -92,7 +90,7 @@ public:
     // We want to investigate FunctionDecl's.
     bool VisitFunctionDecl(clang::FunctionDecl* D);
 
-    typedef FPAnalyser Analyser;
+    typedef FunctionUnique Target;
 };
 
 #endif

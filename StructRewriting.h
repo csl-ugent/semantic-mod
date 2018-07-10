@@ -61,24 +61,23 @@ class StructUnique : public TargetUnique {
                 return fields.size();
             }
         };
-};
 
-// Semantic analyser, willl analyse different nodes within the AST.
-class StructAnalyser : public clang::RecursiveASTVisitor<StructAnalyser> {
-private:
-    clang::ASTContext& astContext; // Used for getting additional AST info.
-    const MetaData& metadata;
-    Candidates<StructUnique>& candidates;
-public:
-    explicit StructAnalyser(clang::ASTContext& Context, const MetaData& metadata, Candidates<StructUnique>& candidates)
-      : astContext(Context), metadata(metadata), candidates(candidates) { }
 
-    // We want to investigate all possible struct declarations and uses
-    void detectStructsRecursively(const clang::Type* origType);
-    bool VisitRecordDecl(clang::RecordDecl* D);
-    bool VisitVarDecl(clang::VarDecl* D);
+        // Semantic analyser, willl analyse different nodes within the AST.
+        class Analyser : public clang::RecursiveASTVisitor<Analyser> {
+            private:
+                clang::ASTContext& astContext; // Used for getting additional AST info.
+                const MetaData& metadata;
+                Candidates<StructUnique>& candidates;
+            public:
+                explicit Analyser(clang::ASTContext& Context, const MetaData& metadata, Candidates<StructUnique>& candidates)
+                    : astContext(Context), metadata(metadata), candidates(candidates) { }
 
-    typedef StructUnique Target;
+                // We want to investigate all possible struct declarations and uses
+                void detectStructsRecursively(const clang::Type* origType);
+                bool VisitRecordDecl(clang::RecordDecl* D);
+                bool VisitVarDecl(clang::VarDecl* D);
+        };
 };
 
 // Semantic Rewriter, will rewrite source code based on the AST.
@@ -97,7 +96,7 @@ public:
     // We want to investigate top-level things.
     bool VisitRecordDecl(clang::RecordDecl* D);
 
-    typedef StructAnalyser Analyser;
+    typedef StructUnique Target;
 };
 
 #endif

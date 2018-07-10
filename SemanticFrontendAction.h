@@ -17,10 +17,10 @@
 #include <sstream>
 #include <string>
 
-template <typename AnalyserType>
+template <typename TargetType>
 class AnalysisFrontendActionFactory : public clang::tooling::FrontendActionFactory
 {
-    typedef typename AnalyserType::Target TargetType;
+    typedef typename TargetType::Analyser AnalyserType;
 
     class AnalysisFrontendAction : public clang::ASTFrontendAction {
         class AnalysisASTConsumer : public clang::ASTConsumer {

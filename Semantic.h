@@ -20,14 +20,13 @@
 // Method used to generate new versions
 template <typename RewriterType>
 void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfVersions) {
-    typedef typename RewriterType::Analyser AnalyserType;
-    typedef typename AnalyserType::Target TargetType;
+    typedef typename RewriterType::Target TargetType;
 
     const MetaData metadata(baseDirectory, outputDirectory);
 
     // We run the analysis phase and get the valid candidates
     Candidates<TargetType> analysis_candidates;
-    Tool->run(new AnalysisFrontendActionFactory<AnalyserType>(metadata, analysis_candidates));
+    Tool->run(new AnalysisFrontendActionFactory<TargetType>(metadata, analysis_candidates));
     auto candidates = analysis_candidates.select_valid();
 
     // We need to determine the maximum number of versions that is actually

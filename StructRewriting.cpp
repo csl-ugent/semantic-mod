@@ -8,7 +8,7 @@
 using namespace clang;
 using namespace llvm;
 
-bool StructAnalyser::VisitRecordDecl(clang::RecordDecl* D) {
+bool StructUnique::Analyser::VisitRecordDecl(clang::RecordDecl* D) {
     // We make sure the record is a struct, and we have its definition
     if (D->isStruct() && D->isThisDeclarationADefinition()) {
         // Count the number of fields in the struct
@@ -39,7 +39,7 @@ bool StructAnalyser::VisitRecordDecl(clang::RecordDecl* D) {
     return true;
 }
 
-void StructAnalyser::detectStructsRecursively(const Type* origType) {
+void StructUnique::Analyser::detectStructsRecursively(const Type* origType) {
     // We obtain the canonical qual type/type.
     QualType qualTypeCn = origType->getCanonicalTypeInternal();
     if (const Type* type = qualTypeCn.getTypePtrOrNull()) {
@@ -81,7 +81,7 @@ void StructAnalyser::detectStructsRecursively(const Type* origType) {
     }
 }
 
-bool StructAnalyser::VisitVarDecl(clang::VarDecl *D) {
+bool StructUnique::Analyser::VisitVarDecl(clang::VarDecl *D) {
     const Type* type = (D->getType()).getTypePtrOrNull();
 
     // We detect structs recursively and remove them from the struct map.

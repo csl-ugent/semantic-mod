@@ -7,7 +7,7 @@ using namespace clang;
 using namespace llvm;
 
 // We use this visitor to check for function pointers. If a pointer to a function is assigned, we invalidate the function
-bool FPAnalyser::VisitBinaryOperator(clang::BinaryOperator* BE) {
+bool FunctionUnique::Analyser::VisitBinaryOperator(clang::BinaryOperator* BE) {
     if (BE->isAssignmentOp())
     {
         // Check if the RHS is a DeclRefExpr
@@ -32,7 +32,7 @@ bool FPAnalyser::VisitBinaryOperator(clang::BinaryOperator* BE) {
     return true;
 }
 
-bool FPAnalyser::VisitCallExpr(clang::CallExpr* CE) {
+bool FunctionUnique::Analyser::VisitCallExpr(clang::CallExpr* CE) {
     FunctionDecl* FD = CE->getDirectCallee();
     if (FD) {
         const FunctionUnique candidate(FD, astContext);
@@ -65,7 +65,7 @@ bool FPAnalyser::VisitCallExpr(clang::CallExpr* CE) {
 }
 
 // AST visitor, used for analysis.
-bool FPAnalyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
+bool FunctionUnique::Analyser::VisitFunctionDecl(clang::FunctionDecl* FD) {
     // We make sure we iterate over the definition.
     if (FD->isThisDeclarationADefinition()) {
         // If we haven't already selected the function, check if the function is eligible:
