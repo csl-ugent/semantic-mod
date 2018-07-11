@@ -86,9 +86,9 @@ class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFact
         const MetaData& metadata;
         const Transformation& transformation;
         clang::Rewriter rewriter;
-        int id;
+        const unsigned long id;
         public:
-        explicit RewritingFrontendAction(const MetaData& metadata, const Transformation& transformation, int id)
+        explicit RewritingFrontendAction(const MetaData& metadata, const Transformation& transformation, const unsigned long id)
             : metadata(metadata), transformation(transformation), id(id) {}
 
         void EndSourceFileAction() {
@@ -167,10 +167,10 @@ class RewritingFrontendActionFactory : public clang::tooling::FrontendActionFact
 private:
     const MetaData& metadata;
     const Transformation& transformation;
-    int id;
+    const unsigned long id;
 
 public:
-    RewritingFrontendActionFactory(const MetaData& metadata, const Transformation& transformation, int id)
+    RewritingFrontendActionFactory(const MetaData& metadata, const Transformation& transformation, const unsigned long id)
         : metadata(metadata), transformation(transformation), id(id) {}
 
     // We create a new instance of the frontend action.
