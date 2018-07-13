@@ -2,10 +2,12 @@
 #define _STRUCTREORDERING
 
 #include "SemanticData.h"
-#include "SemanticFrontendAction.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Rewrite/Core/Rewriter.h"
+#include "clang/Rewrite/Frontend/Rewriters.h"
 
 #include <string>
 #include <vector>
