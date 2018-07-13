@@ -70,7 +70,7 @@ void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDi
     std::vector<Transformation> transformations;
     llvm::outs() << "Total number of versions possible with " << candidates.size() << " candidates is: " << totalVersions << "\n";
     llvm::outs() << "The actual number of versions is set to: " << actualNumberOfVersions << "\n";
-    for (unsigned long versionId = 0; versionId < actualNumberOfVersions; versionId++)
+    for (unsigned long versionId = 1; versionId <= actualNumberOfVersions; versionId++)
     {
         // We choose a candidate at random.
         const auto& chosen = candidates[random_0_to_n(candidates.size())];
@@ -92,9 +92,10 @@ void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDi
         } while (original_ordering == ordering);
 
         // Check if this transformation isn't duplicate. If it is, we try again
+        Transformation transformation(chosen.first, ordering);
         bool found = false;
         for (const auto& t : transformations) {
-            if (t.target == chosen.first && t.ordering == ordering) {
+            if (t == transformation) {
                 found = true;
                 break;
             }
@@ -113,17 +114,9 @@ void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDi
         output["modified"]["items"] = chosen.second.getJSON(ordering);// We output the modified order.
 
         // We write some information regarding the performed transformations to output.
-        writeJSONToFile(metadata.outputPrefix, versionId + 1, "transformations.json", output);
-
-        // Add the transformation
-        transformations.emplace_back(chosen.first, ordering);
-    }
-
-    // We perform the rewrite operations.
-    unsigned long versionId = 1;
-    for (const auto& t : transformations)
-    {
-        Tool->run(new RewritingFrontendActionFactory<RewriterType>(metadata, t, versionId++));
+        writeJSONToFile(metadata.outputPrefix, versionId, "transformations.json", output);
+        Tool->run(new RewritingFrontendActionFactory<RewriterType>(metadata, transformation, versionId));
+        transformations.push_back(transformation);
     }
 }
 

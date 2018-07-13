@@ -67,6 +67,11 @@ struct Transformation {
     const std::vector<unsigned> ordering;
     Transformation(const TargetUnique& target, const std::vector<unsigned>& ordering)
         : target(target), ordering(ordering) {}
+
+    bool operator== (const Transformation& other) const
+    {
+        return (target == other.target) && (ordering == other.ordering);
+    }
 };
 
 // This class contains the data used during the generating of new versions
