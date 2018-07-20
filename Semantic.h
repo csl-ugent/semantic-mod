@@ -11,7 +11,6 @@
 
 #include <algorithm>
 #include <fstream>
-#include <numeric>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -21,6 +20,7 @@
 template <typename RewriterType>
 void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDirectory, const std::string& outputDirectory, const unsigned long numberOfVersions) {
     typedef typename RewriterType::Target TargetType;
+    typedef typename RewriterType::TransformationType TransformationType;
 
     const MetaData metadata(baseDirectory, outputDirectory);
 
@@ -29,25 +29,11 @@ void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDi
     Tool->run(new AnalysisFrontendActionFactory<TargetType>(metadata, analysis_candidates));
     auto candidates = analysis_candidates.select_valid();
 
-    // We need to determine the maximum number of versions that is actually
-    // possible with the given input source files (based on the analysis phase).
+    // Calculate some statistics based on the candidates
     std::map<unsigned, unsigned> histogram;
     unsigned long totalItems = 0;
     unsigned long totalVersions = 0;
-    for (const auto& candidate : candidates) {
-        unsigned nrOfItems = candidate.second.nrOfItems();
-
-        // Keep count of the total possible versions and the total number of items
-        totalVersions += factorial(nrOfItems) -1;// All permutations are possible versions, except for the original one.
-        totalItems += nrOfItems;
-
-        // Look if this amount has already occured or not.
-        if (histogram.find(nrOfItems) != histogram.end()) {
-            histogram[nrOfItems]++;
-        } else {
-            histogram[nrOfItems] = 1;
-        }
-    }
+    TransformationType::calculateStatistics(candidates, histogram, totalItems, totalVersions);
 
     // Create analytics
     Json::Value analytics;
@@ -67,7 +53,7 @@ void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDi
     writeJSONToFile(outputDirectory, -1, "analytics.json", analytics);
 
     unsigned long actualNumberOfVersions = std::min(numberOfVersions, totalVersions);
-    std::vector<Transformation> transformations;
+    std::vector<TransformationType> transformations;
     llvm::outs() << "Total number of versions possible with " << candidates.size() << " candidates is: " << totalVersions << "\n";
     llvm::outs() << "The actual number of versions is set to: " << actualNumberOfVersions << "\n";
     for (unsigned long versionId = 1; versionId <= actualNumberOfVersions; versionId++)
@@ -75,24 +61,10 @@ void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDi
         // We choose a candidate at random.
         const auto& chosen = candidates[random_0_to_n(candidates.size())];
 
-        // Create original ordering
-        std::vector<unsigned> ordering(chosen.second.nrOfItems());
-        std::iota(ordering.begin(), ordering.end(), 0);
-
-        // Things we should write to an output file.
-        Json::Value output;
-        output["target_name"] = chosen.first.getName();
-        output["file_name"] = chosen.first.getFileName();
-        output["original"]["items"] = chosen.second.getJSON(ordering);// We output the original order.
-
-        // Make sure the modified ordering isn't the same as the original
-        std::vector<unsigned> original_ordering = ordering;
-        do {
-            std::random_shuffle(ordering.begin(), ordering.end());
-        } while (original_ordering == ordering);
+        // Generate a transformation for this candidate
+        TransformationType transformation(chosen.first, chosen.second);
 
         // Check if this transformation isn't duplicate. If it is, we try again
-        Transformation transformation(chosen.first, ordering);
         bool found = false;
         for (const auto& t : transformations) {
             if (t == transformation) {
@@ -103,18 +75,12 @@ void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDi
         if (found)
             continue;
 
-        // Debug information.
-        llvm::outs() << "Chosen target: " << chosen.first.getName() << "\n";
-        llvm::outs() << "Chosen ordering: " << "\n";
-        for (auto it : ordering) {
-            llvm::outs() << it << " ";
-        }
-        llvm::outs() << "\n";
-
-        output["modified"]["items"] = chosen.second.getJSON(ordering);// We output the modified order.
-
         // We write some information regarding the performed transformations to output.
+        transformation.outputDebugInfo();
+        const Json::Value output = transformation.getJSON(chosen.second);
         writeJSONToFile(metadata.outputPrefix, versionId, "transformations.json", output);
+
+        // Do the actual transformation and remember it
         Tool->run(new RewritingFrontendActionFactory<RewriterType>(metadata, transformation, versionId));
         transformations.push_back(transformation);
     }

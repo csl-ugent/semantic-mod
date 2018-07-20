@@ -86,11 +86,11 @@ class StructUnique : public TargetUnique {
 class StructReorderingRewriter : public clang::RecursiveASTVisitor<StructReorderingRewriter> {
 private:
     clang::ASTContext& astContext; // Used for getting additional AST info.
-    const Transformation& transformation;
+    const ReorderingTransformation& transformation;
     clang::Rewriter& rewriter;
 public:
     explicit StructReorderingRewriter(clang::ASTContext& Context, const Transformation& transformation, clang::Rewriter& rewriter)
-      : astContext(Context), transformation(transformation), rewriter(rewriter)
+      : astContext(Context), transformation(static_cast<const ReorderingTransformation&>(transformation)), rewriter(rewriter)
     {
         rewriter.setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
     }
@@ -99,6 +99,7 @@ public:
     bool VisitRecordDecl(clang::RecordDecl* D);
 
     typedef StructUnique Target;
+    typedef ReorderingTransformation TransformationType;
 };
 
 #endif

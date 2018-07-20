@@ -1,11 +1,14 @@
 #ifndef _SEMANTIC_DATA
 #define _SEMANTIC_DATA
 
+#include "SemanticUtil.h"
+
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "json.h"
 
+#include <numeric>
 #include <string>
 #include <vector>
 
@@ -62,16 +65,93 @@ class TargetUnique {
 };
 
 // This struct describes a transformation
-struct Transformation {
-    const TargetUnique& target;
-    const std::vector<unsigned> ordering;
-    Transformation(const TargetUnique& target, const std::vector<unsigned>& ordering)
-        : target(target), ordering(ordering) {}
+class Transformation {
+    protected:
+        virtual ~Transformation() {}
+        virtual void outputTransformationSpecificDebugInfo() const = 0;
+    public:
+        const TargetUnique& target;
 
-    bool operator== (const Transformation& other) const
-    {
-        return (target == other.target) && (ordering == other.ordering);
-    }
+        Transformation(const TargetUnique& target)
+            : target(target) {}
+        static void calculateStatistics(const std::vector<std::pair<const TargetUnique&, const TargetUnique::Data&>>& candidates, std::map<unsigned, unsigned>& histogram, unsigned long& totalItems, unsigned long& totalVersions) {}
+        virtual Json::Value getJSON(const TargetUnique::Data& data) const = 0;
+
+        bool operator== (const Transformation& other) const
+        {
+            return (target == other.target);
+        }
+
+        void outputDebugInfo() const
+        {
+            llvm::outs() << "Chosen target: " << target.getName() << "\n";
+            outputTransformationSpecificDebugInfo();
+            llvm::outs() << "\n";
+        }
+};
+
+class ReorderingTransformation : public Transformation {
+    protected:
+        virtual void outputTransformationSpecificDebugInfo() const
+        {
+            llvm::outs() << "Chosen ordering: " << "\n";
+            for (auto it : ordering) {
+                llvm::outs() << it << " ";
+            }
+        }
+
+        const std::vector<unsigned> generateOrdering(unsigned nrOfElements)
+        {
+            // Create original ordering
+            std::vector<unsigned> ordering(nrOfElements);
+            std::iota(ordering.begin(), ordering.end(), 0);
+
+            // Make sure the modified ordering isn't the same as the original
+            std::vector<unsigned> original_ordering = ordering;
+            do {
+                std::random_shuffle(ordering.begin(), ordering.end());
+            } while (original_ordering == ordering);
+
+            return ordering;
+        }
+    public:
+        const std::vector<unsigned> ordering;
+
+        ReorderingTransformation(const TargetUnique& target, const TargetUnique::Data& data)
+            : Transformation(target), ordering(generateOrdering(data.nrOfItems())) {}
+
+        static void calculateStatistics(const std::vector<std::pair<const TargetUnique&, const TargetUnique::Data&>>& candidates, std::map<unsigned, unsigned>& histogram, unsigned long& totalItems, unsigned long& totalVersions)
+        {
+            for (const auto& candidate : candidates) {
+                unsigned nrOfItems = candidate.second.nrOfItems();
+
+                // Keep count of the total possible reorderings and the average number of items
+                totalVersions += factorial(nrOfItems) -1;// All permutations are possible reorderings, except for the original one.
+                totalItems += nrOfItems;
+
+                // Look if this amount has already occured or not.
+                if (histogram.find(nrOfItems) != histogram.end()) {
+                    histogram[nrOfItems]++;
+                } else {
+                    histogram[nrOfItems] = 1;
+                }
+            }
+        }
+
+        virtual Json::Value getJSON(const TargetUnique::Data& data) const
+        {
+            // Create original ordering
+            std::vector<unsigned> orig_ordering(data.nrOfItems());
+            std::iota(orig_ordering.begin(), orig_ordering.end(), 0);
+
+            Json::Value output;
+            output["target_name"] = target.getName();
+            output["file_name"] = target.getFileName();
+            output["original"]["items"] = data.getJSON(orig_ordering);// We output the original order.
+            output["modified"]["items"] = data.getJSON(ordering);// We output the modified order.
+
+            return output;
+        }
 };
 
 // This class contains the data used during the generating of new versions
