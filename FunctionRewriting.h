@@ -2,12 +2,11 @@
 #define _FPREORDERING
 
 #include "SemanticData.h"
+#include "SemanticVisitors.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/Rewrite/Frontend/Rewriters.h"
 
 #include <string>
 #include <vector>
@@ -57,14 +56,10 @@ class FunctionUnique : public TargetUnique {
         };
 
         // Semantic analyser, willl analyse different nodes within the AST.
-        class Analyser : public clang::RecursiveASTVisitor<Analyser> {
-            private:
-                clang::ASTContext& astContext; // Used for getting additional AST info.
-                const MetaData& metadata;
-                Candidates<FunctionUnique>& candidates;
+        class Analyser : public SemanticAnalyser<FunctionUnique>, public clang::RecursiveASTVisitor<Analyser> {
             public:
                 explicit Analyser(clang::ASTContext& Context, const MetaData& metadata, Candidates<FunctionUnique>& candidates)
-                    : astContext(Context), metadata(metadata), candidates(candidates) { }
+                    : SemanticAnalyser(Context, metadata, candidates) {}
 
                 // We want to investigate Function declarations and invocations
                 bool VisitBinaryOperator(clang::BinaryOperator* DRE);
@@ -74,26 +69,21 @@ class FunctionUnique : public TargetUnique {
 };
 
 // Semantic Rewriter, will rewrite source code based on the AST.
-class FPReorderingRewriter : public clang::RecursiveASTVisitor<FPReorderingRewriter> {
-private:
-    clang::ASTContext& astContext; // Used for getting additional AST info.
-    const ReorderingTransformation& transformation;
-    clang::Rewriter& rewriter;
-public:
-    explicit FPReorderingRewriter(clang::ASTContext& Context, const Transformation& transformation, clang::Rewriter& rewriter)
-      : astContext(Context), transformation(static_cast<const ReorderingTransformation&>(transformation)), rewriter(rewriter)
-    {
-        rewriter.setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
-    }
+class FPReorderingRewriter : public SemanticRewriter, public clang::RecursiveASTVisitor<FPReorderingRewriter> {
+    private:
+        const ReorderingTransformation& transformation;
+    public:
+        explicit FPReorderingRewriter(clang::ASTContext& Context, const Transformation& transformation, clang::Rewriter& rewriter)
+          : SemanticRewriter(Context, rewriter), transformation(static_cast<const ReorderingTransformation&>(transformation)) {}
 
-    // We need to rewrite calls to these reordered functions.
-    bool VisitCallExpr(clang::CallExpr* CE);
+        // We need to rewrite calls to these reordered functions.
+        bool VisitCallExpr(clang::CallExpr* CE);
 
-    // We want to investigate FunctionDecl's.
-    bool VisitFunctionDecl(clang::FunctionDecl* D);
+        // We want to investigate FunctionDecl's.
+        bool VisitFunctionDecl(clang::FunctionDecl* D);
 
-    typedef FunctionUnique Target;
-    typedef ReorderingTransformation TransformationType;
+        typedef FunctionUnique Target;
+        typedef ReorderingTransformation TransformationType;
 };
 
 #endif

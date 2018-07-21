@@ -2,12 +2,11 @@
 #define _STRUCTREORDERING
 
 #include "SemanticData.h"
+#include "SemanticVisitors.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/Rewrite/Frontend/Rewriters.h"
 
 #include <string>
 #include <vector>
@@ -66,14 +65,10 @@ class StructUnique : public TargetUnique {
 
 
         // Semantic analyser, willl analyse different nodes within the AST.
-        class Analyser : public clang::RecursiveASTVisitor<Analyser> {
-            private:
-                clang::ASTContext& astContext; // Used for getting additional AST info.
-                const MetaData& metadata;
-                Candidates<StructUnique>& candidates;
+        class Analyser : public SemanticAnalyser<StructUnique>, public clang::RecursiveASTVisitor<Analyser> {
             public:
                 explicit Analyser(clang::ASTContext& Context, const MetaData& metadata, Candidates<StructUnique>& candidates)
-                    : astContext(Context), metadata(metadata), candidates(candidates) { }
+                    : SemanticAnalyser(Context, metadata, candidates) {}
 
                 // We want to investigate all possible struct declarations and uses
                 void detectStructsRecursively(const clang::Type* origType);
@@ -83,23 +78,18 @@ class StructUnique : public TargetUnique {
 };
 
 // Semantic Rewriter, will rewrite source code based on the AST.
-class StructReorderingRewriter : public clang::RecursiveASTVisitor<StructReorderingRewriter> {
-private:
-    clang::ASTContext& astContext; // Used for getting additional AST info.
-    const ReorderingTransformation& transformation;
-    clang::Rewriter& rewriter;
-public:
-    explicit StructReorderingRewriter(clang::ASTContext& Context, const Transformation& transformation, clang::Rewriter& rewriter)
-      : astContext(Context), transformation(static_cast<const ReorderingTransformation&>(transformation)), rewriter(rewriter)
-    {
-        rewriter.setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());
-    }
+class StructReorderingRewriter : public SemanticRewriter, public clang::RecursiveASTVisitor<StructReorderingRewriter> {
+    private:
+        const ReorderingTransformation& transformation;
+    public:
+        explicit StructReorderingRewriter(clang::ASTContext& Context, const Transformation& transformation, clang::Rewriter& rewriter)
+            : SemanticRewriter(Context, rewriter), transformation(static_cast<const ReorderingTransformation&>(transformation)) {}
 
-    // We want to investigate top-level things.
-    bool VisitRecordDecl(clang::RecordDecl* D);
+        // We want to investigate top-level things.
+        bool VisitRecordDecl(clang::RecordDecl* D);
 
-    typedef StructUnique Target;
-    typedef ReorderingTransformation TransformationType;
+        typedef StructUnique Target;
+        typedef ReorderingTransformation TransformationType;
 };
 
 #endif
