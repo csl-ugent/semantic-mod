@@ -147,3 +147,42 @@ bool StructReorderingRewriter::VisitRecordDecl(clang::RecordDecl* D) {
     }
     return true;
 }
+
+bool StructInsertionRewriter::VisitRecordDecl(clang::RecordDecl* D) {
+    // We make sure the record is a struct and a definition.
+    if (D->isStruct() && D->isThisDeclarationADefinition()) {
+        // Check if this is a declaration for the struct that is to be reordered
+        const StructUnique target(D, astContext);
+        if (transformation.target == target) {
+            llvm::outs() << "Declaration of: " << target.getName() << " has to be rewritten!\n";
+
+            std::vector<clang::FieldDecl*> fields(D->field_begin(), D->field_end());
+            const FieldDecl* field;
+            bool before;
+            if (transformation.insertionPoint < fields.size())
+            {
+                field = fields[transformation.insertionPoint];
+                before = true;
+            }
+            else
+            {
+                field = fields[fields.size() -1];
+                before = false;
+            }
+
+            const SourceRange& range = field->getSourceRange();
+            const SourceRange rangeExpanded(astContext.getSourceManager().getExpansionRange(range.getBegin()).first, astContext.getSourceManager().getExpansionRange(range.getEnd()).second);
+            std::string substitute = location2str(rangeExpanded, astContext);
+
+            std::string newField = "int XXX";
+
+            if (before)
+                substitute =  newField + ";\n" + substitute;
+            else
+                substitute = substitute + "\n;" + newField;
+
+            rewriter.ReplaceText(rangeExpanded, substitute);
+        }
+    }
+    return true;
+}

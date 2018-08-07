@@ -92,4 +92,18 @@ class StructReorderingRewriter : public SemanticRewriter, public clang::Recursiv
         typedef ReorderingTransformation TransformationType;
 };
 
+// Semantic Rewriter, will rewrite source code based on the AST.
+class StructInsertionRewriter : public SemanticRewriter, public clang::RecursiveASTVisitor<StructInsertionRewriter> {
+    private:
+        const InsertionTransformation& transformation;
+    public:
+        explicit StructInsertionRewriter(clang::ASTContext& Context, const Transformation& transformation, clang::Rewriter& rewriter)
+            : SemanticRewriter(Context, rewriter), transformation(static_cast<const InsertionTransformation&>(transformation)) {}
+
+        // We want to investigate top-level things.
+        bool VisitRecordDecl(clang::RecordDecl* D);
+
+        typedef StructUnique Target;
+        typedef InsertionTransformation TransformationType;
+};
 #endif

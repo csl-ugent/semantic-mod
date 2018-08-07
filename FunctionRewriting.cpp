@@ -142,3 +142,75 @@ bool FPReorderingRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
 
     return true;
 }
+
+
+bool FPInsertionRewriter::VisitCallExpr(clang::CallExpr* CE) {
+    // We try to get the callee of this function call.
+    if (FunctionDecl* FD = CE->getDirectCallee()) {
+        // We check if this function is to be reordered
+        const FunctionUnique target(FD, astContext);
+        if (transformation.target == target) {
+            llvm::outs() << "Call to function: " << FD->getNameAsString() << " has to be rewritten!\n";
+
+            int newArg = 0;
+
+            if (transformation.insertionPoint < CE->getNumArgs())
+            {
+                const SourceRange& range = CE->getArg(transformation.insertionPoint)->getSourceRange();
+                const SourceRange rangeExpanded(astContext.getSourceManager().getExpansionRange(range.getBegin()).first, astContext.getSourceManager().getExpansionRange(range.getEnd()).second);
+
+                // We replace the argument with another one based on the ordering.
+                const std::string substitute = std::to_string(newArg) + ", " + location2str(rangeExpanded, astContext);
+                rewriter.ReplaceText(rangeExpanded, substitute);
+            }
+            else
+            {
+                const SourceRange& range = CE->getArg(CE->getNumArgs() -1)->getSourceRange();
+                const SourceRange rangeExpanded(astContext.getSourceManager().getExpansionRange(range.getBegin()).first, astContext.getSourceManager().getExpansionRange(range.getEnd()).second);
+
+                // We replace the argument with another one based on the ordering.
+                const std::string substitute = location2str(rangeExpanded, astContext) + ", " + std::to_string(newArg);
+                rewriter.ReplaceText(rangeExpanded, substitute);
+            }
+        }
+    }
+
+    return true;
+}
+
+
+bool FPInsertionRewriter::VisitFunctionDecl(clang::FunctionDecl* FD) {
+    // Check if this is a declaration for the function that is to be reordered
+    FunctionUnique target(FD, astContext);
+    if (transformation.target == target) {
+        llvm::outs() << "Rewriting function: " << FD->getNameAsString() << " definition: " << FD->isThisDeclarationADefinition() << "\n";
+
+        const ParmVarDecl* param;
+        bool before;
+        if (transformation.insertionPoint < FD->getNumParams())
+        {
+            param = FD->getParamDecl(transformation.insertionPoint);
+            before = true;
+        }
+        else
+        {
+            param = FD->getParamDecl(FD->getNumParams() -1);
+            before = false;
+        }
+
+        std::string name = param->getNameAsString();
+        std::string type = param->getType().getAsString();
+        std::string substitute = type + " " + name;
+        std::string newParam = "int XXX";
+
+        if (before)
+            substitute =  newParam + ", " + substitute;
+        else
+            substitute = substitute + ", " + newParam;
+
+        // We replace the field with the new field information.
+        rewriter.ReplaceText(param->getSourceRange(), substitute);
+    }
+
+    return true;
+}

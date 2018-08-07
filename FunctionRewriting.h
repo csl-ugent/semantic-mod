@@ -86,4 +86,22 @@ class FPReorderingRewriter : public SemanticRewriter, public clang::RecursiveAST
         typedef ReorderingTransformation TransformationType;
 };
 
+// Semantic Rewriter, will rewrite source code based on the AST.
+class FPInsertionRewriter : public SemanticRewriter, public clang::RecursiveASTVisitor<FPInsertionRewriter> {
+    private:
+        const InsertionTransformation& transformation;
+    public:
+        explicit FPInsertionRewriter(clang::ASTContext& Context, const Transformation& transformation, clang::Rewriter& rewriter)
+          : SemanticRewriter(Context, rewriter), transformation(static_cast<const InsertionTransformation&>(transformation)) {}
+
+        // We need to rewrite calls to these reordered functions.
+        bool VisitCallExpr(clang::CallExpr* CE);
+
+        // We want to investigate FunctionDecl's.
+        bool VisitFunctionDecl(clang::FunctionDecl* D);
+
+        typedef FunctionUnique Target;
+        typedef InsertionTransformation TransformationType;
+};
+
 #endif

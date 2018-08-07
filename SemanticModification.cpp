@@ -57,8 +57,12 @@ int main(int argc, const char **argv) {
     // We determine what kind of transformation to apply.
     if (TransformationType == "StructReordering") {
         generateVersions<StructReorderingRewriter>(&Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
+    } else if (TransformationType == "StructInsertion") {
+        generateVersions<StructInsertionRewriter>(&Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
     } else if (TransformationType == "FPReordering") {
         generateVersions<FPReorderingRewriter>(&Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
+    } else if (TransformationType == "FPInsertion") {
+        generateVersions<FPInsertionRewriter>(&Tool, BaseDirectory, OutputDirectory, NumberOfVersions);
     }
 
     // Succes.

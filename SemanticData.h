@@ -90,6 +90,48 @@ class Transformation {
         }
 };
 
+class InsertionTransformation : public Transformation {
+    protected:
+        virtual void outputTransformationSpecificDebugInfo() const
+        {
+            llvm::outs() << "Chosen insertion point: " << insertionPoint << "\n";
+        }
+
+    public:
+        const unsigned insertionPoint;
+
+        InsertionTransformation(const TargetUnique& target, const TargetUnique::Data& data)
+            : Transformation(target), insertionPoint(random_0_to_n(data.nrOfItems() +1)) {}
+
+        static void calculateStatistics(const std::vector<std::pair<const TargetUnique&, const TargetUnique::Data&>>& candidates, std::map<unsigned, unsigned>& histogram, unsigned long& totalItems, unsigned long& totalVersions)
+        {
+            for (const auto& candidate : candidates) {
+                unsigned nrOfItems = candidate.second.nrOfItems();
+
+                // Keep count of the total possible reorderings and the average number of items
+                totalVersions += nrOfItems +1;
+                totalItems += nrOfItems;
+
+                // Look if this amount has already occured or not.
+                if (histogram.find(nrOfItems) != histogram.end()) {
+                    histogram[nrOfItems]++;
+                } else {
+                    histogram[nrOfItems] = 1;
+                }
+            }
+        }
+
+        virtual Json::Value getJSON(const TargetUnique::Data& data) const
+        {
+            Json::Value output;
+            output["target_name"] = target.getName();
+            output["file_name"] = target.getFileName();
+            output["insertion_point"] = insertionPoint;
+
+            return output;
+        }
+};
+
 class ReorderingTransformation : public Transformation {
     protected:
         virtual void outputTransformationSpecificDebugInfo() const
