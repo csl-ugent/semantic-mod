@@ -58,26 +58,37 @@ void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDi
     llvm::outs() << "The actual number of versions is set to: " << actualNumberOfVersions << "\n";
     for (unsigned long versionId = 1; versionId <= actualNumberOfVersions; versionId++)
     {
-        // We choose a candidate at random.
-        const auto& chosen = candidates[random_0_to_n(candidates.size() -1)];
+        auto generateNewCandidatePair = [&candidates, &transformations]()
+        {
+            while (true)
+            {
+                // We choose a candidate at random.
+                const auto& candidate = candidates[random_0_to_n(candidates.size() -1)];
 
-        // Generate a transformation for this candidate
-        TransformationType transformation(chosen.first, chosen.second);
+                // Generate a transformation for this candidate
+                TransformationType transformation(candidate.first, candidate.second);
 
-        // Check if this transformation isn't duplicate. If it is, we try again
-        bool found = false;
-        for (const auto& t : transformations) {
-            if (t == transformation) {
-                found = true;
-                break;
+                // Check if this transformation isn't duplicate. If it is, we try again
+                bool duplicate = false;
+                for (const auto& t : transformations) {
+                    if (t == transformation) {
+                        duplicate = true;
+                        break;
+                    }
+                }
+
+                if (!duplicate)
+                    return std::make_pair(candidate, transformation);
             }
-        }
-        if (found)
-            continue;
+        };
+
+        auto pair = generateNewCandidatePair();
+        const auto& candidate = pair.first;
+        TransformationType transformation = pair.second;
 
         // We write some information regarding the performed transformations to output.
         transformation.outputDebugInfo();
-        const Json::Value output = transformation.getJSON(chosen.second);
+        const Json::Value output = transformation.getJSON(candidate.second);
         writeJSONToFile(metadata.outputPrefix, versionId, "transformations.json", output);
 
         // Do the actual transformation and remember it
