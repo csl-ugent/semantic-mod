@@ -103,6 +103,11 @@ class InsertionTransformation : public Transformation {
         InsertionTransformation(const TargetUnique& target, const TargetUnique::Data& data)
             : Transformation(target), insertionPoint(random_0_to_n(data.nrOfItems() +1)) {}
 
+        bool operator== (const InsertionTransformation& other) const
+        {
+            return (static_cast<const Transformation&>(*this) == static_cast<const Transformation&>(other)) && (insertionPoint == other.insertionPoint);
+        }
+
         static void calculateStatistics(const std::vector<std::pair<const TargetUnique&, const TargetUnique::Data&>>& candidates, std::map<unsigned, unsigned>& histogram, unsigned long& totalItems, unsigned long& totalVersions)
         {
             for (const auto& candidate : candidates) {
@@ -161,6 +166,11 @@ class ReorderingTransformation : public Transformation {
 
         ReorderingTransformation(const TargetUnique& target, const TargetUnique::Data& data)
             : Transformation(target), ordering(generateOrdering(data.nrOfItems())) {}
+
+        bool operator== (const ReorderingTransformation& other) const
+        {
+            return (static_cast<const Transformation&>(*this) == static_cast<const Transformation&>(other)) && (ordering == other.ordering);
+        }
 
         static void calculateStatistics(const std::vector<std::pair<const TargetUnique&, const TargetUnique::Data&>>& candidates, std::map<unsigned, unsigned>& histogram, unsigned long& totalItems, unsigned long& totalVersions)
         {
