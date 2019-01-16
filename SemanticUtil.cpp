@@ -6,6 +6,8 @@
 #include <cmath>
 #include <cstdlib> // rand
 #include <fstream>
+#include <numeric>
+#include <random>
 #include <sstream>
 
 // Obtain source information corresponding to a statement.
@@ -17,15 +19,31 @@ std::string location2str(const clang::SourceRange& range, const clang::ASTContex
     return std::string(Start, End - Start);
 }
 
+static std::mt19937 generator;
+
 void init_random(unsigned seed) {
-    /* initialize random seed */
-    srand(seed);
+    generator.seed(seed);
 }
 
-int random_0_to_n(int n) {
+unsigned random_0_to_n(const unsigned n) {
+    std::uniform_int_distribution<unsigned> distribution(0, n);
 
-    // return a number between 0 and n-1.
-    return rand() % n;
+    return distribution(generator);
+}
+
+const std::vector<unsigned> generate_random_ordering(unsigned nrOfElements)
+{
+    // Create original ordering
+    std::vector<unsigned> ordering(nrOfElements);
+    std::iota(ordering.begin(), ordering.end(), 0);
+
+    // Make sure the modified ordering isn't the same as the original
+    std::vector<unsigned> original_ordering = ordering;
+    do {
+        std::shuffle(ordering.begin(), ordering.end(), generator);
+    } while (original_ordering == ordering);
+
+    return ordering;
 }
 
 unsigned long factorial(unsigned long n)

@@ -101,7 +101,7 @@ class InsertionTransformation : public Transformation {
         const unsigned insertionPoint;
 
         InsertionTransformation(const TargetUnique& target, const TargetUnique::Data& data)
-            : Transformation(target), insertionPoint(random_0_to_n(data.nrOfItems() +1)) {}
+            : Transformation(target), insertionPoint(random_0_to_n(data.nrOfItems())) {}
 
         bool operator== (const InsertionTransformation& other) const
         {
@@ -147,25 +147,11 @@ class ReorderingTransformation : public Transformation {
             }
         }
 
-        const std::vector<unsigned> generateOrdering(unsigned nrOfElements)
-        {
-            // Create original ordering
-            std::vector<unsigned> ordering(nrOfElements);
-            std::iota(ordering.begin(), ordering.end(), 0);
-
-            // Make sure the modified ordering isn't the same as the original
-            std::vector<unsigned> original_ordering = ordering;
-            do {
-                std::random_shuffle(ordering.begin(), ordering.end());
-            } while (original_ordering == ordering);
-
-            return ordering;
-        }
     public:
         const std::vector<unsigned> ordering;
 
         ReorderingTransformation(const TargetUnique& target, const TargetUnique::Data& data)
-            : Transformation(target), ordering(generateOrdering(data.nrOfItems())) {}
+            : Transformation(target), ordering(generate_random_ordering(data.nrOfItems())) {}
 
         bool operator== (const ReorderingTransformation& other) const
         {

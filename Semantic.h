@@ -59,7 +59,7 @@ void generateVersions(clang::tooling::ClangTool* Tool, const std::string& baseDi
     for (unsigned long versionId = 1; versionId <= actualNumberOfVersions; versionId++)
     {
         // We choose a candidate at random.
-        const auto& chosen = candidates[random_0_to_n(candidates.size())];
+        const auto& chosen = candidates[random_0_to_n(candidates.size() -1)];
 
         // Generate a transformation for this candidate
         TransformationType transformation(chosen.first, chosen.second);

@@ -7,12 +7,16 @@
 #include "json.h"
 
 #include <string>
+#include <vector>
 
 // Method used to initialize the random seed.
 void init_random(unsigned seed);
 
-// Method used to choose a number between 0 and n - 1 ([0, n-1]).
-int random_0_to_n(int n);
+// Method used to choose a number between 0 and n ([0, n]).
+unsigned random_0_to_n(const unsigned n);
+
+// Generate a random ordering
+const std::vector<unsigned> generate_random_ordering(unsigned nrOfElements);
 
 // General utility functions.
 std::string location2str(const clang::SourceRange& range, const clang::ASTContext& astContext);
